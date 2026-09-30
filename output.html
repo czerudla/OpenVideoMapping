@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Videomapping – výstup</title>
+  <style>
+    html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+    canvas { display: block; width: 100vw; height: 100vh; }
+    body.idle, body.idle * { cursor: none; }
+    #hint {
+      position: fixed; inset: 0; display: grid; place-items: center;
+      font: 500 20px/1.5 "Barlow", system-ui, sans-serif; color: #8a93a2;
+      background: rgba(0, 0, 0, 0.6); text-align: center; user-select: none;
+    }
+    #hint strong { color: #f2a93b; font-weight: 600; }
+    #hint[hidden] { display: none; }
+  </style>
+</head>
+<body>
+  <canvas id="out"></canvas>
+  <div id="hint">
+    <div>
+      <strong>Klikněte pro celou obrazovku</strong><br>
+      nebo stiskněte F. Okno nejdřív přesuňte na projektor.
+    </div>
+  </div>
+  <script type="module" src="js/output.js"></script>
+</body>
+</html>

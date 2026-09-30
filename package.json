@@ -1,0 +1,13 @@
+{
+  "name": "videomapping",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Webový videomapping – kreslení oblastí, animace, perspektivní korekce",
+  "scripts": {
+    "start": "node server/serve.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
