@@ -1,0 +1,11 @@
+name: Nápad
+description: Krátký nápad, který agent pro zadání rozpracuje
+labels: [idea]
+body:
+  - type: textarea
+    id: napad
+    attributes:
+      label: Nápad
+      description: Co by aplikace měla umět, stačí pár vět.
+    validations:
+      required: true

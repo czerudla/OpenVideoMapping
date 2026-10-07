@@ -1,0 +1,59 @@
+# Vývojový agent: spustí se, když vlastník repozitáře přidá issue label `approved`.
+# Implementuje zadání ve vlastní větvi a otevře pull request.
+
+name: Claude implement
+
+on:
+  issues:
+    types: [labeled]
+
+concurrency:
+  group: claude-implement-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  implement:
+    # Schvalovat smí jen vlastník repozitáře, ne bot ani jiný uživatel.
+    if: >
+      github.event.label.name == 'approved' &&
+      github.event.sender.login == github.repository_owner
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          prompt: |
+            Jsi vývojový agent projektu OpenVideoMapping. Řiď se souborem CLAUDE.md, hlavně sekcí „Workflow agentů“.
+
+            REPO: ${{ github.repository }}
+            ISSUE: #${{ github.event.issue.number }}
+
+            Postup:
+            1. Přečti zadání: `gh issue view ${{ github.event.issue.number }} --comments`.
+            2. Přidej issue label `in-progress`.
+            3. Pokud zadání není jednoznačné nebo nejde splnit v rozsahu jednoho PR, napiš do issue komentář s konkrétními otázkami, přidej label `needs-human` a skonči.
+            4. Z aktuálního `master` vytvoř větev `issue-${{ github.event.issue.number }}-<krátký-popis-bez-diakritiky>`.
+            5. Implementuj jen to, co zadání požaduje. Při změně ovládání nebo funkcí aktualizuj README.
+            6. Ověř změnu: `node --check` na každý změněný JS soubor, spusť `node server/serve.js &`, přes `curl -sf` zkontroluj `/`, `/output.html` a změněné soubory a server ukonči.
+            7. Commituj po logických krocích (zprávy česky, rozkazovací způsob) a pushni větev.
+            8. Otevři PR do `master` přes `gh pr create`. Název podle issue, v těle: `Closes #${{ github.event.issue.number }}`, shrnutí změn, jak bylo ověřeno, a checklist akceptačních kritérií se stavem.
+            9. Odeber z issue label `in-progress`.
+
+            Nikdy nepushuj do `master` a nikdy nemerguj.
+          claude_args: |
+            --max-turns 80
+            --allowedTools "Read,Edit,Write,Glob,Grep,Bash(git:*),Bash(gh issue view:*),Bash(gh issue comment:*),Bash(gh issue edit:*),Bash(gh pr create:*),Bash(gh pr view:*),Bash(node:*),Bash(npm:*),Bash(curl:*),Bash(sleep:*),Bash(kill:*),Bash(ls:*)"

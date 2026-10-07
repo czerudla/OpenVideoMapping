@@ -1,0 +1,56 @@
+# Vývojový agent – opravy: spustí se, když review agent (nebo ty) přidá PR label
+# `changes-requested`. Zapracuje nálezy a pushne do stejné větve, čímž se znovu spustí review.
+
+name: Claude fix
+
+on:
+  pull_request:
+    types: [labeled]
+
+concurrency:
+  group: claude-fix-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  fix:
+    if: >
+      github.event.label.name == 'changes-requested' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      (github.event.sender.login == 'claude[bot]' || github.event.sender.login == github.repository_owner)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          allowed_bots: claude
+          prompt: |
+            Jsi vývojový agent projektu OpenVideoMapping. Řiď se souborem CLAUDE.md.
+
+            REPO: ${{ github.repository }}
+            PR: #${{ github.event.pull_request.number }}, větev `${{ github.event.pull_request.head.ref }}` (už je checkoutnutá).
+
+            Review požaduje změny. Postup:
+            1. Přečti PR, poslední souhrnný komentář s `<!-- claude-review -->`, inline komentáře a připomínky od člověka: `gh pr view ${{ github.event.pull_request.number }} --comments` a `gh api repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/comments`.
+            2. Oprav všechny blokující nálezy a ty drobné, které dávají smysl. Pokud s nálezem nesouhlasíš, vysvětli proč v komentáři PR.
+            3. Ověř změnu stejně jako při implementaci (`node --check`, spuštění serveru, `curl`).
+            4. Commitni, pushni do stejné větve a přidej do PR komentář se shrnutím, co jsi opravil.
+
+            Nevytvářej nový PR, nepushuj do `master` a nemerguj.
+          claude_args: |
+            --max-turns 60
+            --allowedTools "Read,Edit,Write,Glob,Grep,Bash(git:*),Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr comment:*),Bash(gh api:*),Bash(gh issue view:*),Bash(node:*),Bash(npm:*),Bash(curl:*),Bash(sleep:*),Bash(kill:*),Bash(ls:*)"
