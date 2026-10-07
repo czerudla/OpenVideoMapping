@@ -34,6 +34,7 @@ Projekt se průběžně ukládá do prohlížeče. Tlačítkem **Uložit do soub
 | C | Kalibrační mřížka |
 | B | Blackout |
 | Ctrl+Z / Ctrl+Shift+Z | Zpět / Znovu |
+| Ctrl+D | Duplikovat vybranou oblast |
 
 ## Černá mimo oblasti
 

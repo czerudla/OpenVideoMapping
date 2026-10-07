@@ -375,6 +375,11 @@ document.addEventListener('keydown', (e) => {
     return;
   }
   if (mod && e.key.toLowerCase() === 'y' && !inField) { e.preventDefault(); redo(); return; }
+  if (mod && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 'd' && !inField && selectedShape()) {
+    e.preventDefault();
+    duplicateSelected();
+    return;
+  }
   if (inField || mod || e.altKey) return;
 
   switch (e.key) {
@@ -556,7 +561,7 @@ animSelect.addEventListener('change', () => {
   commit();
 });
 
-$('btn-dup').addEventListener('click', () => {
+function duplicateSelected() {
   const s = selectedShape();
   if (!s) return;
   snapshot();
@@ -565,7 +570,8 @@ $('btn-dup').addEventListener('click', () => {
   state.shapes.push(copy);
   selectedId = copy.id;
   afterStructureChange();
-});
+}
+$('btn-dup').addEventListener('click', duplicateSelected);
 $('btn-del').addEventListener('click', deleteSelected);
 $('btn-new-shape').addEventListener('click', () => setTool('draw'));
 
