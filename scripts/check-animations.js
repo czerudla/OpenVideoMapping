@@ -41,6 +41,9 @@ for (const f of files) {
   if (a.colors !== undefined && ![0, 1, 2].includes(a.colors)) {
     errors.push(`Soubor ${f}: pole „colors“ musí být 0, 1 nebo 2.`);
   }
+  if (a.precompute !== undefined && typeof a.precompute !== 'function') {
+    errors.push(`Soubor ${f}: pole „precompute“ musí být funkce.`);
+  }
   if (a.id !== f.slice(0, -3)) {
     errors.push(`Soubor ${f}: id „${a.id}“ neodpovídá názvu souboru.`);
   }

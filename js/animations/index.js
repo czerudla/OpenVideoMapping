@@ -41,6 +41,9 @@ function validate(a, seen) {
   if (typeof a.id !== 'string' || typeof a.name !== 'string' || typeof a.glsl !== 'string') {
     return 'pole id, name a glsl musí být text';
   }
+  if (a.precompute !== undefined && typeof a.precompute !== 'function') {
+    return 'pole „precompute“ musí být funkce';
+  }
   if (![0, 1, 2].includes(a.colors)) return 'pole „colors“ musí být 0, 1 nebo 2';
   if (seen.has(a.id)) return `duplicitní id „${a.id}“`;
   return null;
