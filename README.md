@@ -55,7 +55,9 @@ css/style.css       vzhled editoru
 js/app.js           logika editoru (kreslení, úpravy, warp, historie)
 js/output.js        výstupní okno, fullscreen, hlášení rozlišení
 js/renderer.js      WebGL2 vykreslování (stencil maska + perspektiva)
-js/animations.js    knihovna animací v GLSL
+js/shaders.js       sdílený kód shaderů (vertex, hlavička fragmentu, kalibrace)
+js/animations/      animace, jedna na soubor (<id>.js) + registr index.js
+scripts/check-animations.js  kontrola souladu animací s registrem
 js/homography.js    výpočet perspektivní transformace
 js/state.js         model projektu a ukládání
 server/serve.js     lokální server + most PJLink
@@ -65,14 +67,22 @@ Editor a výstup si stav předávají přes `BroadcastChannel`, takže musí bě
 
 ## Jak přidat animaci
 
-Do pole `ANIMATIONS` v `js/animations.js` přidejte záznam s tělem GLSL funkce, která vrací barvu:
+1. Vytvořte soubor `js/animations/<id>.js` (název souboru se musí shodovat s `id`) s tělem GLSL funkce, která vrací barvu:
 
 ```js
-{
-  id: 'blink', name: 'Mrkání', colors: 2,
+// Mrkání – krátké probliknutí barvy A.
+export default {
+  id: 'blink',
+  name: 'Mrkání',
+  colors: 2,
   glsl: `return mix(uColB, uColA, step(0.9, fract(t)));`,
-},
+};
 ```
+
+2. V `js/animations/index.js` přidejte `import` a řádek do pole `REGISTRY`. Pořadí určuje pořadí v nabídce editoru.
+3. Spusťte `npm run check:animations`, který ověří soubory a registr.
+
+`colors` je počet barev, které animace používá (0–2). `id` je neměnné, ukládá se do projektů. Vadný záznam se při načtení vypíše do konzole a vynechá, ostatní animace fungují dál.
 
 K dispozici jsou `vUV` (poloha v celé ploše 0–1), `vLocal` (poloha v rámci oblasti 0–1), `t` (čas násobený rychlostí), `uColA`, `uColB`, `uAspect` a funkce `hsv2rgb`, `hash`, `noise`, `fbm`.
 
