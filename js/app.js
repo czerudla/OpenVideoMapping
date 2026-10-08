@@ -39,10 +39,12 @@ try {
   $('hint-text').textContent = `${err.message} Použijte aktuální Chrome, Edge nebo Firefox.`;
   throw err;
 }
+renderer.prepare(state);
 
 // ---------- ukládání a synchronizace ----------
 let saveTimer = null;
 function commit() {
+  renderer.prepare(state);
   channel.postMessage({ type: 'state', state });
   clearTimeout(saveTimer);
   saveTimer = setTimeout(() => saveState(state), 250);

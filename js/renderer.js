@@ -32,7 +32,7 @@ export class Renderer {
     gl.enableVertexAttribArray(0);
     gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
     this.vs = this.compile(gl.VERTEX_SHADER, VERTEX_SHADER);
-    for (const a of ANIMATIONS) this.program(a.id);
+    this.program('solid');
     this.program('__calibration');
   }
 
@@ -52,9 +52,14 @@ export class Renderer {
   program(id) {
     if (this.programs.has(id)) return this.programs.get(id);
     const gl = this.gl;
-    const body = id === '__calibration'
-      ? CALIBRATION_GLSL
-      : (ANIMATIONS.find((a) => a.id === id) ?? ANIMATIONS[0]).glsl;
+    const anim = id === '__calibration' ? null : ANIMATIONS.find((a) => a.id === id);
+    if (id !== '__calibration' && !anim) {
+      console.error(`Animace „${id}“ neexistuje, použije se plná barva.`);
+      const fallback = id === 'solid' ? null : this.program('solid');
+      this.programs.set(id, fallback);
+      return fallback;
+    }
+    const body = anim ? anim.glsl : CALIBRATION_GLSL;
     let entry = null;
     try {
       const fs = this.compile(gl.FRAGMENT_SHADER, buildFragment(body));
@@ -74,6 +79,11 @@ export class Renderer {
     }
     this.programs.set(id, entry);
     return entry;
+  }
+
+  // Předkompiluje programy animací použitých v projektu; volat mimo render().
+  prepare(state) {
+    for (const shape of state.shapes) this.program(shape.anim);
   }
 
   resize() {
