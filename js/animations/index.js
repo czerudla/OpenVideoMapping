@@ -16,6 +16,7 @@ import matrix from './matrix.js';
 import bounce from './bounce.js';
 import torch from './torch.js';
 import pacman from './pacman.js';
+import pong from './pong.js';
 
 const REGISTRY = [
   solid,
@@ -34,6 +35,7 @@ const REGISTRY = [
   bounce,
   torch,
   pacman,
+  pong,
 ];
 
 const REQUIRED = ['id', 'name', 'colors', 'glsl'];
