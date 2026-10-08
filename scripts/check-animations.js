@@ -1,30 +1,23 @@
-// Kontrola knihovny animací: soubory v js/animations/ musí odpovídat registru.
+// Kontrola knihovny animací: každý soubor z manifestu musí být platná animace.
 // Spuštění: npm run check:animations
-import { readdirSync, existsSync, readFileSync } from 'node:fs';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { existsSync } from 'node:fs';
+import { pathToFileURL } from 'node:url';
 import path from 'node:path';
+import { ANIMATIONS_DIR, buildManifest } from './animations-manifest.js';
 
-const dir = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'js', 'animations');
 const errors = [];
 
-const files = readdirSync(dir).filter((f) => f.endsWith('.js') && f !== 'index.js');
+const files = await buildManifest();
 
-// Importy z registru: `import <jmeno> from './<soubor>.js';`
-const indexSrc = readFileSync(path.join(dir, 'index.js'), 'utf8');
-const imported = [...indexSrc.matchAll(/^import\s+\w+\s+from\s+'\.\/([^']+)';/gm)].map((m) => m[1]);
-
-for (const f of files) {
-  if (!imported.includes(f)) errors.push(`Soubor ${f} není zaregistrovaný v index.js.`);
-}
-for (const f of imported) {
-  if (!existsSync(path.join(dir, f))) errors.push(`Registr importuje neexistující soubor ${f}.`);
+if (!existsSync(path.join(ANIMATIONS_DIR, 'solid.js'))) {
+  errors.push('Chybí soubor solid.js (výchozí a záložní animace).');
 }
 
 const seen = new Map();
 for (const f of files) {
   let a;
   try {
-    a = (await import(pathToFileURL(path.join(dir, f)).href)).default;
+    a = (await import(pathToFileURL(path.join(ANIMATIONS_DIR, f)).href)).default;
   } catch (e) {
     errors.push(`Soubor ${f} nelze načíst: ${e.message}`);
     continue;
@@ -36,6 +29,11 @@ for (const f of files) {
   for (const key of ['id', 'name', 'colors', 'glsl']) {
     if (a[key] === undefined || a[key] === null || a[key] === '') {
       errors.push(`Soubor ${f}: chybí pole „${key}“.`);
+    }
+  }
+  for (const key of ['id', 'name', 'glsl']) {
+    if (a[key] !== undefined && a[key] !== null && a[key] !== '' && typeof a[key] !== 'string') {
+      errors.push(`Soubor ${f}: pole „${key}“ musí být text.`);
     }
   }
   if (a.colors !== undefined && ![0, 1, 2].includes(a.colors)) {

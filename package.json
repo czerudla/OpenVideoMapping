@@ -6,7 +6,8 @@
   "description": "Webový videomapping – kreslení oblastí, animace, perspektivní korekce",
   "scripts": {
     "start": "node server/serve.js",
-    "check:animations": "node scripts/check-animations.js"
+    "check:animations": "node scripts/check-animations.js",
+    "build:manifest": "node scripts/build-animations-manifest.js"
   },
   "engines": {
     "node": ">=18"

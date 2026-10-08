@@ -8,6 +8,7 @@ import crypto from 'node:crypto';
 import { readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { buildManifest } from '../scripts/animations-manifest.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PORT = Number(process.env.PORT) || 8080;
@@ -109,6 +110,18 @@ const server = http.createServer(async (req, res) => {
 
   if (req.method !== 'GET' && req.method !== 'HEAD') {
     res.writeHead(405).end();
+    return;
+  }
+
+  // Manifest animací se generuje za běhu z pevné složky js/animations/ (jen čtení).
+  if (url.pathname === '/js/animations/manifest.json') {
+    try {
+      const body = JSON.stringify(await buildManifest());
+      res.writeHead(200, { 'Content-Type': MIME['.json'], 'Cache-Control': 'no-cache' });
+      res.end(req.method === 'HEAD' ? undefined : body);
+    } catch {
+      sendJson(res, 500, { ok: false, error: 'Manifest animací se nepodařilo sestavit.' });
+    }
     return;
   }
 
