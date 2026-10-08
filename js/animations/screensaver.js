@@ -19,18 +19,18 @@ export default {
   float best = 1.0e9;
   float fn = 1.0;
   float fm = 1.0;
-  for (int n = 1; n <= 9; n++) {
-    for (int m = 1; m <= 9; m++) {
+  for (int n = 1; n <= 7; n++) {
+    for (int m = 1; m <= 7; m++) {
       int a = n;
       int b = m;
-      for (int k = 0; k < 6; k++) {
+      for (int k = 0; k < 4; k++) {
         if (b == 0) break;
         int r = a % b;
         a = b;
         b = r;
       }
       if (a != 1) continue;
-      float score = abs(log(float(n) * range.x / (float(m) * range.y))) + 0.03 * abs(float(n + m) - 9.0);
+      float score = abs(log(float(n) * range.x / (float(m) * range.y))) + 0.03 * abs(float(n + m) - 7.0);
       if (score < best) { best = score; fn = float(n); fm = float(m); }
     }
   }
@@ -76,7 +76,7 @@ export default {
     int cx = int(tx);
     int g = cx / 6;
     int gc = cx - 6 * g;
-    if (gc < 5) ink = float((GLYPH[g * 5 + int(ty)] >> (4 - gc)) & 1);
+    if (gc < 5) ink = float((GLYPH[g * 5 + (4 - int(ty))] >> (4 - gc)) & 1);
   }
   logo = mix(logo, cel ? uColA : vec3(0.0), ink);
   return mix(col, logo, cover);`,
