@@ -11,6 +11,7 @@ import plasma from './plasma.js';
 import fire from './fire.js';
 import sparkle from './sparkle.js';
 import strobe from './strobe.js';
+import balls from './balls.js';
 
 const REGISTRY = [
   solid,
@@ -24,6 +25,7 @@ const REGISTRY = [
   fire,
   sparkle,
   strobe,
+  balls,
 ];
 
 const REQUIRED = ['id', 'name', 'colors', 'glsl'];
