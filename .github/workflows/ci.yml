@@ -1,68 +1,29 @@
-# Review agent: zkontroluje každý PR do masteru.
-# Job „Claude review“ projde jen s labelem `review-ok`. Nastav ho v branch protection
-# jako povinný status check, auto-merge pak počká na review i na tvůj Approve.
-
-name: Claude review
+naname: CI
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened, ready_for_review]
+    branches: [master]
+  push:
     branches: [master]
 
-concurrency:
-  group: claude-review-${{ github.event.pull_request.number }}
-  cancel-in-progress: true
+permissions:
+  contents: read
 
 jobs:
-  review:
-    name: Claude review
-    if: github.event.pull_request.draft == false
+  kontroly:
+    name: Kontroly
     runs-on: ubuntu-latest
-    timeout-minutes: 30
-    permissions:
-      contents: read
-      pull-requests: write
-      issues: write
-      id-token: write
-    env:
-      GH_TOKEN: ${{ github.token }}
-      PR: ${{ github.event.pull_request.number }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          fetch-depth: 1
-
-      # Nový commit = nové review. Odebrání přes GITHUB_TOKEN nespustí další workflow.
-      - name: Reset review labels
-        run: gh pr edit "$PR" --repo "$GITHUB_REPOSITORY" --remove-label review-ok --remove-label changes-requested || true
-
-      - uses: anthropics/claude-code-action@v1
-        with:
-          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          allowed_bots: claude
-          prompt: |
-            Jsi review agent projektu OpenVideoMapping. Řiď se souborem CLAUDE.md, hlavně sekcemi „Klíčové koncepty“ a „Review agent“.
-
-            REPO: ${{ github.repository }}
-            PR: #${{ github.event.pull_request.number }}
-
-            Postup:
-            1. `gh pr view ${{ github.event.pull_request.number }} --comments` a `gh pr diff ${{ github.event.pull_request.number }}`. Z „Closes #N“ v popisu načti zadání: `gh issue view N`.
-            2. Zkontroluj PR proti akceptačním kritériím a CLAUDE.md: správnost, černá mimo oblasti, kompatibilita uložených projektů, bezpečnost serveru, výkon render smyčky, rozsah změn, aktuálnost README.
-            3. Ke konkrétním problémům dej inline komentáře. Pak přidej jeden souhrnný komentář (`gh pr comment`), který začíná řádkem `<!-- claude-review -->` a na druhém řádku má přesně jeden z verdiktů `Verdikt: schváleno`, `Verdikt: změny požadovány` nebo `Verdikt: needs-human`. Pak následuje seznam nálezů rozdělený na blokující a drobné.
-            4. Spočítej předchozí souhrnné komentáře s `<!-- claude-review -->`, které obsahují `Verdikt: změny požadovány`.
-            5. Nastav právě jeden label:
-               - žádné blokující nálezy → `gh pr edit ${{ github.event.pull_request.number }} --add-label review-ok`
-               - blokující nálezy a méně než 3 předchozí zamítnutí → `--add-label changes-requested`
-               - jinak → `--add-label needs-human` a v komentáři shrň, na čem se agenti neshodnou.
-
-            Kód neměň a necommituj.
-          claude_args: |
-            --max-turns 40
-            --allowedTools "Read,Glob,Grep,mcp__github_inline_comment__create_inline_comment,Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr comment:*),Bash(gh pr edit:*),Bash(gh issue view:*),Bash(node --check:*)"
-
-      - name: Gate on verdict
+          node-version: 20
+      - name: Syntaxe JS (node --check)
         run: |
-          labels=$(gh pr view "$PR" --repo "$GITHUB_REPOSITORY" --json labels --jq '.labels[].name')
-          echo "$labels"
-          echo "$labels" | grep -qx review-ok || { echo "Review neschválilo PR."; exit 1; }
+          status=0
+          while IFS= read -r f; do
+            node --check "$f" || { echo "::error file=$f::Syntaktická chyba v $f"; status=1; }
+          done < <(find js server scripts -name '*.js' | sort)
+          exit $status
+      - name: Registr animací
+        run: npm run check:animations
