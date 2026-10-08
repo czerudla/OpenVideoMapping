@@ -13,6 +13,7 @@ import sparkle from './sparkle.js';
 import strobe from './strobe.js';
 import balls from './balls.js';
 import matrix from './matrix.js';
+import bounce from './bounce.js';
 
 const REGISTRY = [
   solid,
@@ -28,6 +29,7 @@ const REGISTRY = [
   strobe,
   balls,
   matrix,
+  bounce,
 ];
 
 const REQUIRED = ['id', 'name', 'colors', 'glsl'];
