@@ -26,6 +26,8 @@ export default {
   float side = area >= 0.0 ? 1.0 : -1.0;
   float R = clamp(0.06 * min(hi.x - lo.x, hi.y - lo.y), 0.0005, MAX_R);
   float inset = R * 1.3;
+  // Okno pro tečny úměrné odsazení, aby střed v rozích plynule zatáčel.
+  float W = max(EPS, inset * 1.5);
   float rb = R * 0.22;
   float per = max(polyPerimeter(), 0.001);
 
@@ -50,8 +52,8 @@ export default {
   for (int k = 0; k < 4; k++) {
     float s = k == 3 ? sPac : (k0 + float(k - 1) + 0.5) * sp;
     vec2 p0 = polyPoint(s) * A;
-    vec2 t1 = p0 - polyPoint(s - EPS) * A;
-    vec2 t2 = polyPoint(s + EPS) * A - p0;
+    vec2 t1 = p0 - polyPoint(s - W) * A;
+    vec2 t2 = polyPoint(s + W) * A - p0;
     t1 /= max(length(t1), 1e-6);
     t2 /= max(length(t2), 1e-6);
     vec2 n1 = side * vec2(-t1.y, t1.x);
@@ -65,12 +67,12 @@ export default {
       // Pusa se otevírá a zavírá, míří ve směru jízdy.
       float open = 0.05 + 0.65 * abs(sin(ph * 7.0));
       float mouth = smoothstep(cos(open) - 0.02, cos(open) + 0.02, dot(d, t2) / max(r, 1e-6));
-      col = mix(col, uColA, smoothstep(R, R - aa, r) * (1.0 - mouth));
+      col = mix(col, uColA, (1.0 - smoothstep(R - aa, R, r)) * (1.0 - mouth));
     } else {
       float sw = mod(s, per);
       bool eaten = reveal ? false : sPac >= sw;
       float vis = reveal ? blink : 1.0;
-      if (!eaten) col = mix(col, ballCol, smoothstep(rb, rb - aa, r) * vis);
+      if (!eaten) col = mix(col, ballCol, (1.0 - smoothstep(rb - aa, rb, r)) * vis);
     }
   }
   return col;`,
