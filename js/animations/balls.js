@@ -8,7 +8,7 @@ export default {
   const float REST = 0.4;
   vec2 bbox = fwidth(vUV) / max(fwidth(vLocal), vec2(1e-9));
   vec2 size = bbox * vec2(uAspect, 1.0);
-  vec2 q = vLocal * size;
+  vec2 q = vec2(vLocal.x, 1.0 - vLocal.y) * size;
   float colW = size.x / COLS;
   float col = clamp(floor(q.x / colW), 0.0, COLS - 1.0);
   float r = size.x * 0.05;
