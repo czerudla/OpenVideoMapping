@@ -86,6 +86,17 @@ export default {
 
 K dispozici jsou `vUV` (poloha v celé ploše 0–1), `vLocal` (poloha v rámci oblasti 0–1), `t` (čas násobený rychlostí), `uColA`, `uColB`, `uAspect` a funkce `hsv2rgb`, `hash`, `noise`, `fbm`.
 
+Animace může pracovat i s tvarem oblasti. Vrcholy polygonu jsou v `uPoly[MAX_POLY]` (souřadnice jako `vUV`, `MAX_POLY` = 64) a jejich počet v `uPolyCount`. Oblast s více než 64 body se do shaderu pošle zjednodušená (každý k-tý bod), maska zůstává přesná. Funkce počítají v prostoru se zachovaným poměrem stran, takže vzdálenosti jsou ve všech směrech stejné:
+
+| Funkce | Význam |
+|---|---|
+| `float polyDist(vec2 uv)` | znaménková vzdálenost k hranici oblasti, uvnitř záporná (funguje i pro nekonvexní tvary) |
+| `float polyPerimeter()` | délka obvodu |
+| `float polyArc(vec2 uv)` | poloha nejbližšího bodu hranice měřená po obvodu od prvního vrcholu (0 až `polyPerimeter()`) |
+| `vec2 polyPoint(float s)` | bod na obvodu ve vzdálenosti `s` po obvodu, v souřadnicích `vUV` |
+
+Příklad zvýraznění hrany: `return uColA * smoothstep(0.02, 0.0, abs(polyDist(vUV)));`
+
 ## Možná další rozšíření
 
 - video a obrázky jako výplň oblastí,
