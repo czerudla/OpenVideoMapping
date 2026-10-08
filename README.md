@@ -97,6 +97,31 @@ Animace může pracovat i s tvarem oblasti. Vrcholy polygonu jsou v `uPoly[MAX_P
 
 Příklad zvýraznění hrany: `return uColA * smoothstep(0.02, 0.0, abs(polyDist(vUV)));`
 
+### Předvýpočet dat z tvaru oblasti (`precompute`)
+
+Některé efekty (např. odraz od hran nepravidelného polygonu) nejdou spočítat v shaderu jako čistá funkce času. Animace proto může volitelně exportovat `precompute(points, aspect)`:
+
+```js
+export default {
+  id: 'centroid', name: 'Těžiště', colors: 1,
+  // points: body oblasti v prostoru 0–1, aspect: poměr stran plochy
+  precompute(points, aspect) {
+    const n = points.length;
+    const cx = points.reduce((s, p) => s + p[0], 0) / n;
+    const cy = points.reduce((s, p) => s + p[1], 0) / n;
+    return new Float32Array([cx, cy, 0, 0]); // jeden vec4 záznam
+  },
+  glsl: `float d = length((vUV - uData[0].xy) * vec2(uAspect, 1.0));
+  return uDataCount > 0 ? uColA * step(d, 0.02) : vec3(0.0);`,
+};
+```
+
+- Funkce se volá jen při změně bodů oblasti, animace nebo poměru stran, nikdy v render smyčce. Výsledek se uloží do cache podle `shape.id`.
+- Musí vrátit `Float32Array` s nejvýše `4 * MAX_DATA` čísly (`MAX_DATA` = 64), tedy vec4 záznamy, a musí být deterministická (editor i výstup počítají každý zvlášť).
+- Shader dostane `uniform vec4 uData[MAX_DATA]` a `uniform int uDataCount` (počet platných záznamů). Animace bez `precompute` mají `uDataCount = 0`.
+- Výjimka nebo neplatný výsledek se vypíše do konzole a oblast se vykreslí s `uDataCount = 0`.
+- Hook je jen pro geometrii, ne pro simulaci závislou na čase.
+
 ## Možná další rozšíření
 
 - video a obrázky jako výplň oblastí,

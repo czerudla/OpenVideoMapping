@@ -3,7 +3,7 @@
 // vějíř s operací INVERT (sudo-lichá výplň, funguje i pro konkávní tvary),
 // pak se animace kreslí jen tam, kde je stencil = 1. Mimo oblasti zůstává RGB 0,0,0.
 
-import { VERTEX_SHADER, CALIBRATION_GLSL, buildFragment } from './shaders.js';
+import { VERTEX_SHADER, CALIBRATION_GLSL, MAX_DATA, buildFragment } from './shaders.js';
 import { ANIMATIONS } from './animations/index.js';
 import { squareToQuad, mul3, toColumnMajor } from './homography.js';
 
@@ -30,6 +30,7 @@ export class Renderer {
     this.programs = new Map();
     this.polyCache = new WeakMap();
     this.polyWarned = false;
+    this.precomputed = new Map(); // shape.id → { key, data, count }
     this.buffer = gl.createBuffer();
     this.vao = gl.createVertexArray();
     gl.bindVertexArray(this.vao);
@@ -75,8 +76,9 @@ export class Renderer {
       gl.linkProgram(p);
       if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p));
       const u = {};
-      for (const name of ['uH', 'uBBox', 'uTime', 'uBright', 'uAspect', 'uColA', 'uColB', 'uPoly', 'uPolyCount'])
+      for (const name of ['uH', 'uBBox', 'uTime', 'uBright', 'uAspect', 'uColA', 'uColB', 'uPoly', 'uPolyCount', 'uDataCount'])
         u[name] = gl.getUniformLocation(p, name);
+      u.uData = gl.getUniformLocation(p, 'uData');
       entry = { p, u };
     } catch (err) {
       console.error(`Shader „${id}“ se nepodařilo zkompilovat:`, err);
@@ -88,10 +90,15 @@ export class Renderer {
 
   // Předkompiluje programy animací použitých v projektu; volat mimo render().
   prepare(state) {
+    const aspect = state.resolution.w / state.resolution.h;
+    const alive = new Set();
     for (const shape of state.shapes) {
       this.program(shape.anim);
       this.polyData(shape);
+      alive.add(shape.id);
+      this.precompute(shape, aspect);
     }
+    for (const id of this.precomputed.keys()) if (!alive.has(id)) this.precomputed.delete(id);
   }
 
   // Vrcholy oblasti pro uniformu uPoly. Pole se vytváří jednou pro oblast,
@@ -115,6 +122,31 @@ export class Renderer {
     }
     entry.count = c;
     return entry;
+  }
+
+  // Zavolá volitelný hook animace `precompute(points, aspect)`; výsledek cachuje podle
+  // otisku bodů, animace a poměru stran. Chyba nebo neplatný výsledek = žádná data.
+  precompute(shape, aspect) {
+    const anim = ANIMATIONS.find((a) => a.id === shape.anim);
+    if (typeof anim?.precompute !== 'function') {
+      this.precomputed.delete(shape.id);
+      return;
+    }
+    const key = `${shape.anim}|${aspect}|${shape.points.join(';')}`;
+    if (this.precomputed.get(shape.id)?.key === key) return;
+    const entry = { key, data: new Float32Array(MAX_DATA * 4), count: 0 };
+    try {
+      const out = anim.precompute(shape.points.map((p) => [p[0], p[1]]), aspect);
+      if (!(out instanceof Float32Array) || out.length % 4 !== 0 || out.length > MAX_DATA * 4) {
+        throw new Error(`musí vrátit Float32Array o délce násobku 4, nejvýše ${MAX_DATA * 4}`);
+      }
+      if (out.some((v) => !Number.isFinite(v))) throw new Error('výsledek obsahuje neplatné číslo');
+      entry.data.set(out);
+      entry.count = out.length / 4;
+    } catch (err) {
+      console.error(`Předvýpočet animace „${shape.anim}“ selhal, data se nepoužijí:`, err);
+    }
+    this.precomputed.set(shape.id, entry);
   }
 
   resize() {
@@ -198,6 +230,9 @@ export class Renderer {
       const poly = this.polyData(shape);
       gl.uniform2fv(prog.u.uPoly, poly.arr);
       gl.uniform1i(prog.u.uPolyCount, poly.count);
+      const pre = this.precomputed.get(shape.id);
+      gl.uniform1i(prog.u.uDataCount, pre ? pre.count : 0);
+      if (pre && pre.count > 0) gl.uniform4fv(prog.u.uData, pre.data);
       gl.drawArrays(gl.TRIANGLE_FAN, n, 4);
 
       if (state.calibration) {

@@ -1,8 +1,11 @@
 // Sdílený kód shaderů. Animace jsou v js/animations/. Každá animace je tělo GLSL
 // funkce `vec3 anim(float t)`.
 // K dispozici: vUV (0–1 v celé ploše), vLocal (0–1 v rámci oblasti),
-// uColA, uColB, uAspect a pomocné funkce hsv2rgb, hash, noise, fbm.
+// uColA, uColB, uAspect, volitelná data z precompute (uData, uDataCount) a pomocné funkce hsv2rgb, hash, noise, fbm.
 // Tvar oblasti: uPoly, uPolyCount a funkce polyDist, polyPerimeter, polyArc, polyPoint.
+
+// Nejvyšší počet vec4 záznamů, které animace může vrátit z precompute().
+export const MAX_DATA = 64;
 
 export const VERTEX_SHADER = `#version 300 es
 layout(location = 0) in vec2 aPos;
@@ -29,6 +32,9 @@ uniform vec3 uColB;
 #define MAX_POLY 64
 uniform vec2 uPoly[MAX_POLY];
 uniform int uPolyCount;
+#define MAX_DATA ${MAX_DATA}
+uniform vec4 uData[MAX_DATA];
+uniform int uDataCount;
 out vec4 outColor;
 
 vec3 hsv2rgb(vec3 c) {
