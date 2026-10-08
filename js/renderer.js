@@ -3,7 +3,8 @@
 // vějíř s operací INVERT (sudo-lichá výplň, funguje i pro konkávní tvary),
 // pak se animace kreslí jen tam, kde je stencil = 1. Mimo oblasti zůstává RGB 0,0,0.
 
-import { VERTEX_SHADER, ANIMATIONS, CALIBRATION_GLSL, buildFragment } from './animations.js';
+import { VERTEX_SHADER, CALIBRATION_GLSL, buildFragment } from './shaders.js';
+import { ANIMATIONS } from './animations/index.js';
 import { squareToQuad, mul3, toColumnMajor } from './homography.js';
 
 // Normalizované souřadnice obrazovky (0–1, y dolů) → clip space WebGL.
