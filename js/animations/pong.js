@@ -61,19 +61,20 @@ function segDist(a, b, x, y, out) {
 }
 
 // Nejhlubší průnik míčku s hranou (s odsazením pálky), ke které se míček blíží.
-function violation(poly, clear, x, y, vx, vy, out) {
+// Omezení jsou úsečky {a, b, clear, edge}; hrana -2 je záchranná, bez pálky.
+function violation(cons, x, y, vx, vy, out) {
   const probe = {};
   let best = 0;
   out.edge = -1;
-  for (let i = 0; i < poly.length; i++) {
-    segDist(poly[i], poly[(i + 1) % poly.length], x, y, probe);
-    const slack = probe.d - clear[i];
+  for (const c of cons) {
+    segDist(c.a, c.b, x, y, probe);
+    const slack = probe.d - c.clear;
     if (slack < best && vx * probe.nx + vy * probe.ny < 0) {
       best = slack;
-      out.edge = i; out.nx = probe.nx; out.ny = probe.ny; out.slack = slack;
+      out.edge = c.edge; out.nx = probe.nx; out.ny = probe.ny; out.slack = slack;
     }
   }
-  return out.edge >= 0;
+  return out.edge !== -1;
 }
 
 // Nejbližší průsečík paprsku s obvodem: vzdálenost a index hrany.
@@ -93,12 +94,12 @@ function rayHit(poly, x, y, dx, dy) {
 }
 
 // Start v těžišti, případně v nejbližším bodě mřížky, kam se míček vejde.
-function findStart(poly, clear, box) {
+function findStart(poly, cons, box) {
   const probe = {};
   const fits = (x, y) => {
     if (!inside(poly, x, y)) return false;
-    for (let i = 0; i < poly.length; i++) {
-      if (segDist(poly[i], poly[(i + 1) % poly.length], x, y, probe).d < clear[i]) return false;
+    for (const c of cons) {
+      if (segDist(c.a, c.b, x, y, probe).d < c.clear) return false;
     }
     return true;
   };
@@ -147,17 +148,29 @@ function precompute(points, aspect) {
   const pmax = PADDLE_MAX * Math.min(bw, bh);
   const pmin = PADDLE_MIN * r;
   // Hrana s pálkou drží míček dál od obvodu (odsazení + tloušťka pálky).
-  const clear = poly.map((a, i) => {
+  // Odrazy od hrany s pálkou jsou odsazené od rohů o půl délky pálky, aby na ně pálka dosáhla.
+  // Celá hrana navíc drží míček uvnitř oblasti (odraz bez pálky, hrana -2).
+  const cons = [];
+  poly.forEach((a, i) => {
     const b = poly[(i + 1) % poly.length];
     const len = Math.hypot(b[0] - a[0], b[1] - a[1]);
-    return Math.min(PADDLE_FRAC * len, pmax) >= pmin ? r * (1 + GAP + THICK) : r;
+    const pl = Math.min(PADDLE_FRAC * len, pmax);
+    if (pl < pmin) {
+      cons.push({ a, b, clear: r, edge: i });
+      return;
+    }
+    const f = pl / 2 / len;
+    const a2 = [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f];
+    const b2 = [b[0] - (b[0] - a[0]) * f, b[1] - (b[1] - a[1]) * f];
+    cons.push({ a: a2, b: b2, clear: r * (1 + GAP + THICK), edge: i });
+    cons.push({ a, b, clear: r, edge: -2 });
   });
   let signed = 0;
   poly.forEach((a, i) => {
     const b = poly[(i + 1) % poly.length];
     signed += a[0] * b[1] - b[0] * a[1];
   });
-  const start = findStart(poly, clear, box);
+  const start = findStart(poly, cons, box);
   if (!start) return none;
 
   const rnd = mulberry32(seedFrom(points));
@@ -174,7 +187,7 @@ function precompute(points, aspect) {
 
   for (let n = 0; n < MAX_STEPS && bounces < MAX_BOUNCES; n++) {
     const nx = x + vx * ds, ny = y + vy * ds;
-    if (!violation(poly, clear, nx, ny, vx, vy, hit)) {
+    if (!violation(cons, nx, ny, vx, vy, hit)) {
       x = nx; y = ny; time += ds / speed;
       continue;
     }
@@ -182,7 +195,7 @@ function precompute(points, aspect) {
     let lo = 0, hi = ds;
     for (let k = 0; k < 30; k++) {
       const m = (lo + hi) / 2;
-      if (violation(poly, clear, x + vx * m, y + vy * m, vx, vy, {})) hi = m; else lo = m;
+      if (violation(cons, x + vx * m, y + vy * m, vx, vy, {})) hi = m; else lo = m;
     }
     x += vx * lo; y += vy * lo; time += lo / speed;
     const vn = vx * hit.nx + vy * hit.ny;
