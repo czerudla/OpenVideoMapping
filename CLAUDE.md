@@ -18,6 +18,7 @@ npm start          # node server/serve.js, http://localhost:8080
 - Node.js 18+, **žádné npm závislosti**. Čistý ES modules JavaScript, bez build kroku, bez frameworku, bez TypeScriptu.
 - Novou závislost (i dev) přidej jen tehdy, když to zadání výslovně povoluje.
 - Automatické testy zatím neexistují. Dokud nebudou, ověř změnu aspoň takto: `node --check` na každý změněný JS soubor, spuštění serveru a načtení `/` i `/output.html` bez chyb v konzoli. V PR popiš, jak jsi změnu ověřil.
+- CI (`.github/workflows/ci.yml`, job `Kontroly`) u každého PR do `master` spouští `node --check` na všechny `*.js` v `js/`, `server/` a `scripts/` a `npm run check:animations`. Tytéž příkazy spusť lokálně před pushem.
 
 ## Architektura
 

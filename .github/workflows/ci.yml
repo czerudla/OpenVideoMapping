@@ -1,0 +1,29 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [master]
+  push:
+    branches: [master]
+
+permissions:
+  contents: read
+
+jobs:
+  kontroly:
+    name: Kontroly
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Syntaxe JS (node --check)
+        run: |
+          status=0
+          while IFS= read -r f; do
+            node --check "$f" || { echo "::error file=$f::Syntaktická chyba v $f"; status=1; }
+          done < <(find js server scripts -name '*.js' | sort)
+          exit $status
+      - name: Registr animací
+        run: npm run check:animations
