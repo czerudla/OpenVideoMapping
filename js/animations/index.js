@@ -15,6 +15,7 @@ import balls from './balls.js';
 import matrix from './matrix.js';
 import bounce from './bounce.js';
 import torch from './torch.js';
+import pacman from './pacman.js';
 
 const REGISTRY = [
   solid,
@@ -32,6 +33,7 @@ const REGISTRY = [
   matrix,
   bounce,
   torch,
+  pacman,
 ];
 
 const REQUIRED = ['id', 'name', 'colors', 'glsl'];
