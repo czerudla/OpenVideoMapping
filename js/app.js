@@ -1,6 +1,6 @@
 // Editor: kreslení oblastí, úpravy bodů, warp, synchronizace s výstupem.
 import { Renderer } from './renderer.js';
-import { ANIMATIONS, getAnimation } from './animations/index.js';
+import { ANIMATIONS, ANIMATIONS_ERROR, getAnimation } from './animations/index.js';
 import { squareToQuad, invert3, applyH, isConvexQuad } from './homography.js';
 import {
   CHANNEL_NAME, uid, createDefaultState, normalizeState, loadState, saveState,
@@ -507,6 +507,10 @@ function deleteSelected() {
 
 // ---------- panel vlastností ----------
 const animSelect = $('p-anim');
+if (ANIMATIONS_ERROR) {
+  $('anim-error').textContent = ANIMATIONS_ERROR;
+  $('anim-error').hidden = false;
+}
 for (const a of ANIMATIONS) {
   const o = document.createElement('option');
   o.value = a.id;

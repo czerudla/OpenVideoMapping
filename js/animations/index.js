@@ -1,44 +1,9 @@
-// Registr animací. Pořadí importů a pole REGISTRY určuje pořadí v nabídce editoru.
-// Nová animace = nový soubor <id>.js v této složce + jeden import a jeden řádek v poli.
+// Registr animací. Seznam souborů dodává manifest (generuje ho server nebo `npm run build:manifest`),
+// takže nová animace = jen nový soubor <id>.js v této složce.
 import solid from './solid.js';
-import pulse from './pulse.js';
-import rainbow from './rainbow.js';
-import stripes from './stripes.js';
-import scan from './scan.js';
-import level from './level.js';
-import rings from './rings.js';
-import plasma from './plasma.js';
-import fire from './fire.js';
-import sparkle from './sparkle.js';
-import strobe from './strobe.js';
-import balls from './balls.js';
-import matrix from './matrix.js';
-import bounce from './bounce.js';
-import torch from './torch.js';
-import pacman from './pacman.js';
-import pong from './pong.js';
-
-const REGISTRY = [
-  solid,
-  pulse,
-  rainbow,
-  stripes,
-  scan,
-  level,
-  rings,
-  plasma,
-  fire,
-  sparkle,
-  strobe,
-  balls,
-  matrix,
-  bounce,
-  torch,
-  pacman,
-  pong,
-];
 
 const REQUIRED = ['id', 'name', 'colors', 'glsl'];
+const FILE_RE = /^[a-z0-9-]+\.js$/;
 
 // Vrátí českou chybu, nebo null, pokud je záznam v pořádku.
 function validate(a, seen) {
@@ -57,22 +22,56 @@ function validate(a, seen) {
   return null;
 }
 
-function buildAnimations(list) {
-  const seen = new Set();
-  const out = [];
-  list.forEach((a, i) => {
-    const err = validate(a, seen);
-    if (err) {
-      console.error(`Animace č. ${i + 1} (${a?.id ?? '?'}) byla vynechána: ${err}.`);
-      return;
-    }
-    seen.add(a.id);
-    out.push(a);
-  });
-  return out;
+async function loadManifest() {
+  const res = await fetch(new URL('./manifest.json', import.meta.url));
+  if (!res.ok) throw new Error(`stavový kód ${res.status}`);
+  const list = await res.json();
+  if (!Array.isArray(list)) throw new Error('manifest není pole');
+  return list;
 }
 
-export const ANIMATIONS = buildAnimations(REGISTRY);
+async function loadAll() {
+  let files;
+  try {
+    files = await loadManifest();
+  } catch (e) {
+    const msg = `Manifest animací se nepodařilo načíst (${e.message}). Dostupná je jen animace „solid“. Spusťte aplikaci přes npm start nebo npm run build:manifest.`;
+    console.error(msg);
+    return { list: [solid], error: msg };
+  }
+  const names = files.filter((f) => typeof f === 'string' && FILE_RE.test(f) && f !== 'index.js');
+  const results = await Promise.allSettled(names.map((f) => import(`./${f}`)));
+  const seen = new Set();
+  const out = [];
+  results.forEach((r, i) => {
+    const file = names[i];
+    if (r.status === 'rejected') {
+      console.error(`Animace ${file} se nepodařilo načíst a byla vynechána: ${r.reason?.message ?? r.reason}.`);
+      return;
+    }
+    const anim = r.value.default;
+    const err = validate(anim, seen);
+    if (err) {
+      console.error(`Animace ${file} byla vynechána: ${err}.`);
+      return;
+    }
+    if (anim.id !== file.slice(0, -3)) {
+      console.error(`Animace ${file} byla vynechána: id „${anim.id}“ neodpovídá názvu souboru.`);
+      return;
+    }
+    seen.add(anim.id);
+    out.push(anim);
+  });
+  // Pořadí: solid první (výchozí a záložní), ostatní podle názvu.
+  out.sort((a, b) => (a.id === 'solid' ? -1 : b.id === 'solid' ? 1 : a.name.localeCompare(b.name, 'cs')));
+  if (!out.some((a) => a.id === 'solid')) out.unshift(solid);
+  return { list: out, error: null };
+}
+
+const { list, error } = await loadAll();
+
+export const ANIMATIONS = list;
+export const ANIMATIONS_ERROR = error;
 
 export function getAnimation(id) {
   return ANIMATIONS.find((a) => a.id === id) ?? ANIMATIONS[0];

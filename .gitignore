@@ -1,3 +1,6 @@
+# Generovaný manifest animací (npm run build:manifest)
+js/animations/manifest.json
+
 # Logs
 logs
 *.log

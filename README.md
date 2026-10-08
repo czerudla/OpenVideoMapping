@@ -56,8 +56,8 @@ js/app.js           logika editoru (kreslení, úpravy, warp, historie)
 js/output.js        výstupní okno, fullscreen, hlášení rozlišení
 js/renderer.js      WebGL2 vykreslování (stencil maska + perspektiva)
 js/shaders.js       sdílený kód shaderů (vertex, hlavička fragmentu, kalibrace)
-js/animations/      animace, jedna na soubor (<id>.js) + registr index.js
-scripts/check-animations.js  kontrola souladu animací s registrem
+js/animations/      animace, jedna na soubor (<id>.js); index.js je načte podle manifestu
+scripts/            manifest animací (animations-manifest.js, build-animations-manifest.js), check-animations.js
 js/homography.js    výpočet perspektivní transformace
 js/state.js         model projektu a ukládání
 server/serve.js     lokální server + most PJLink
@@ -79,8 +79,7 @@ export default {
 };
 ```
 
-2. V `js/animations/index.js` přidejte `import` a řádek do pole `REGISTRY`. Pořadí určuje pořadí v nabídce editoru.
-3. Spusťte `npm run check:animations`, který ověří soubory a registr.
+2. Spusťte `npm run check:animations`, který ověří všechny soubory animací. Nic dalšího se nepřidává ani needituje: seznam animací se skládá automaticky (server ho generuje za běhu jako `/js/animations/manifest.json`, pro statický hosting ho vytvoří `npm run build:manifest`). Po obnovení stránky je animace v nabídce. V nabídce je první `solid`, ostatní jsou seřazené podle názvu.
 
 `colors` je počet barev, které animace používá (0–2). `id` je neměnné, ukládá se do projektů. Vadný záznam se při načtení vypíše do konzole a vynechá, ostatní animace fungují dál.
 
