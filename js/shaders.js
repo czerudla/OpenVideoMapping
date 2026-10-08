@@ -2,6 +2,7 @@
 // funkce `vec3 anim(float t)`.
 // K dispozici: vUV (0–1 v celé ploše), vLocal (0–1 v rámci oblasti),
 // uColA, uColB, uAspect a pomocné funkce hsv2rgb, hash, noise, fbm.
+// Tvar oblasti: uPoly, uPolyCount a funkce polyDist, polyPerimeter, polyArc, polyPoint.
 
 export const VERTEX_SHADER = `#version 300 es
 layout(location = 0) in vec2 aPos;
@@ -25,6 +26,9 @@ uniform float uBright;
 uniform float uAspect;
 uniform vec3 uColA;
 uniform vec3 uColB;
+#define MAX_POLY 64
+uniform vec2 uPoly[MAX_POLY];
+uniform int uPolyCount;
 out vec4 outColor;
 
 vec3 hsv2rgb(vec3 c) {
@@ -49,6 +53,81 @@ float fbm(vec2 p) {
   for (int i = 0; i < 5; i++) { v += a * noise(p); p *= 2.0; a *= 0.5; }
   return v;
 }
+
+// Vrchol polygonu v prostoru se zachovaným poměrem stran.
+vec2 polyV(int i) { return uPoly[i] * vec2(uAspect, 1.0); }
+int polyNext(int i) { return i + 1 >= uPolyCount ? 0 : i + 1; }
+
+// Znaménková vzdálenost k hranici polygonu (uvnitř záporná), i pro nekonvexní tvary.
+float polyDist(vec2 uv) {
+  vec2 q = uv * vec2(uAspect, 1.0);
+  float d = 1e9;
+  float s = 1.0;
+  for (int i = 0; i < MAX_POLY; i++) {
+    if (i >= uPolyCount) break;
+    vec2 a = polyV(i);
+    vec2 b = polyV(polyNext(i));
+    vec2 e = b - a;
+    vec2 w = q - a;
+    vec2 p = w - e * clamp(dot(w, e) / max(dot(e, e), 1e-12), 0.0, 1.0);
+    d = min(d, dot(p, p));
+    bvec3 c = bvec3(q.y >= a.y, q.y < b.y, e.x * w.y > e.y * w.x);
+    if (all(c) || all(not(c))) s = -s;
+  }
+  return s * sqrt(d);
+}
+
+// Délka obvodu polygonu.
+float polyPerimeter() {
+  float len = 0.0;
+  for (int i = 0; i < MAX_POLY; i++) {
+    if (i >= uPolyCount) break;
+    len += length(polyV(polyNext(i)) - polyV(i));
+  }
+  return len;
+}
+
+// Poloha nejbližšího bodu hranice měřená po obvodu od prvního vrcholu.
+float polyArc(vec2 uv) {
+  vec2 q = uv * vec2(uAspect, 1.0);
+  float best = 1e9;
+  float arc = 0.0;
+  float acc = 0.0;
+  for (int i = 0; i < MAX_POLY; i++) {
+    if (i >= uPolyCount) break;
+    vec2 a = polyV(i);
+    vec2 b = polyV(polyNext(i));
+    vec2 e = b - a;
+    vec2 w = q - a;
+    float h = clamp(dot(w, e) / max(dot(e, e), 1e-12), 0.0, 1.0);
+    vec2 p = w - e * h;
+    float d = dot(p, p);
+    float l = length(e);
+    if (d < best) { best = d; arc = acc + h * l; }
+    acc += l;
+  }
+  return arc;
+}
+
+// Bod na obvodu ve vzdálenosti s po obvodu (souřadnice vUV); s se cyklicky zalamuje.
+vec2 polyPoint(float s) {
+  float per = polyPerimeter();
+  if (per <= 0.0) return uPoly[0];
+  s = mod(s, per);
+  vec2 res = uPoly[0];
+  for (int i = 0; i < MAX_POLY; i++) {
+    if (i >= uPolyCount) break;
+    int j = polyNext(i);
+    float l = length(polyV(j) - polyV(i));
+    if (s <= l || j == 0) {
+      res = mix(uPoly[i], uPoly[j], l > 0.0 ? clamp(s / l, 0.0, 1.0) : 0.0);
+      break;
+    }
+    s -= l;
+  }
+  return res;
+}
+
 vec3 anim(float t);
 void main() {
   vec3 c = anim(uTime);

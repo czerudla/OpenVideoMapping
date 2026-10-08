@@ -10,6 +10,9 @@ import { squareToQuad, mul3, toColumnMajor } from './homography.js';
 // Normalizované souřadnice obrazovky (0–1, y dolů) → clip space WebGL.
 const TO_CLIP = [2, 0, -1, 0, -2, 1, 0, 0, 1];
 
+// Musí odpovídat MAX_POLY v FRAGMENT_HEADER.
+const MAX_POLY = 64;
+
 function hexToRgb(hex) {
   const n = parseInt(String(hex).replace('#', ''), 16) || 0;
   return [((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255];
@@ -25,6 +28,8 @@ export class Renderer {
     if (!gl) throw new Error('Prohlížeč nepodporuje WebGL2.');
     this.gl = gl;
     this.programs = new Map();
+    this.polyCache = new WeakMap();
+    this.polyWarned = false;
     this.buffer = gl.createBuffer();
     this.vao = gl.createVertexArray();
     gl.bindVertexArray(this.vao);
@@ -70,7 +75,7 @@ export class Renderer {
       gl.linkProgram(p);
       if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p));
       const u = {};
-      for (const name of ['uH', 'uBBox', 'uTime', 'uBright', 'uAspect', 'uColA', 'uColB'])
+      for (const name of ['uH', 'uBBox', 'uTime', 'uBright', 'uAspect', 'uColA', 'uColB', 'uPoly', 'uPolyCount'])
         u[name] = gl.getUniformLocation(p, name);
       entry = { p, u };
     } catch (err) {
@@ -83,7 +88,33 @@ export class Renderer {
 
   // Předkompiluje programy animací použitých v projektu; volat mimo render().
   prepare(state) {
-    for (const shape of state.shapes) this.program(shape.anim);
+    for (const shape of state.shapes) {
+      this.program(shape.anim);
+      this.polyData(shape);
+    }
+  }
+
+  // Vrcholy oblasti pro uniformu uPoly. Pole se vytváří jednou pro oblast,
+  // dál se jen přepisuje (render() nealokuje). Nad MAX_POLY bodů se bere každý k-tý.
+  polyData(shape) {
+    let entry = this.polyCache.get(shape);
+    if (!entry) {
+      entry = { arr: new Float32Array(MAX_POLY * 2), count: 0 };
+      this.polyCache.set(shape, entry);
+    }
+    const pts = shape.points;
+    const step = Math.max(1, Math.ceil(pts.length / MAX_POLY));
+    if (step > 1 && !this.polyWarned) {
+      this.polyWarned = true;
+      console.info(`Oblast má ${pts.length} bodů, shaderu se kvůli limitu ${MAX_POLY} pošle zjednodušený tvar (každý ${step}. bod). Maska zůstává přesná.`);
+    }
+    let c = 0;
+    for (let i = 0; i < pts.length; i += step, c++) {
+      entry.arr[c * 2] = pts[i][0];
+      entry.arr[c * 2 + 1] = pts[i][1];
+    }
+    entry.count = c;
+    return entry;
   }
 
   resize() {
@@ -164,6 +195,9 @@ export class Renderer {
       gl.uniform1f(prog.u.uBright, shape.bright);
       gl.uniform3fv(prog.u.uColA, hexToRgb(shape.colA));
       gl.uniform3fv(prog.u.uColB, hexToRgb(shape.colB));
+      const poly = this.polyData(shape);
+      gl.uniform2fv(prog.u.uPoly, poly.arr);
+      gl.uniform1i(prog.u.uPolyCount, poly.count);
       gl.drawArrays(gl.TRIANGLE_FAN, n, 4);
 
       if (state.calibration) {
