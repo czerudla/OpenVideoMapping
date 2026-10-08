@@ -1,0 +1,75 @@
+// Sdílený kód shaderů. Animace jsou v js/animations/. Každá animace je tělo GLSL
+// funkce `vec3 anim(float t)`.
+// K dispozici: vUV (0–1 v celé ploše), vLocal (0–1 v rámci oblasti),
+// uColA, uColB, uAspect a pomocné funkce hsv2rgb, hash, noise, fbm.
+
+export const VERTEX_SHADER = `#version 300 es
+layout(location = 0) in vec2 aPos;
+uniform mat3 uH;
+uniform vec4 uBBox;
+out vec2 vUV;
+out vec2 vLocal;
+void main() {
+  vUV = aPos;
+  vLocal = (aPos - uBBox.xy) / max(uBBox.zw, vec2(1e-6));
+  vec3 p = uH * vec3(aPos, 1.0);
+  gl_Position = vec4(p.xy, 0.0, p.z);
+}`;
+
+export const FRAGMENT_HEADER = `#version 300 es
+precision highp float;
+in vec2 vUV;
+in vec2 vLocal;
+uniform float uTime;
+uniform float uBright;
+uniform float uAspect;
+uniform vec3 uColA;
+uniform vec3 uColB;
+out vec4 outColor;
+
+vec3 hsv2rgb(vec3 c) {
+  vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+  vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
+  return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
+}
+float hash(vec2 p) {
+  p = fract(p * vec2(123.34, 456.21));
+  p += dot(p, p + 45.32);
+  return fract(p.x * p.y);
+}
+float noise(vec2 p) {
+  vec2 i = floor(p), f = fract(p);
+  float a = hash(i), b = hash(i + vec2(1.0, 0.0));
+  float c = hash(i + vec2(0.0, 1.0)), d = hash(i + vec2(1.0, 1.0));
+  vec2 u = f * f * (3.0 - 2.0 * f);
+  return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);
+}
+float fbm(vec2 p) {
+  float v = 0.0, a = 0.5;
+  for (int i = 0; i < 5; i++) { v += a * noise(p); p *= 2.0; a *= 0.5; }
+  return v;
+}
+vec3 anim(float t);
+void main() {
+  vec3 c = anim(uTime);
+  outColor = vec4(clamp(c, 0.0, 1.0) * uBright, 1.0);
+}
+`;
+
+// Kalibrační mřížka přes celou plochu warpu.
+export const CALIBRATION_GLSL = `vec2 p = vUV * vec2(uAspect, 1.0) * 8.0;
+  vec2 g = abs(fract(p - 0.5) - 0.5) / fwidth(p);
+  float grid = 1.0 - clamp(min(g.x, g.y), 0.0, 1.0);
+  vec2 b = min(vUV, 1.0 - vUV) / fwidth(vUV);
+  float border = 1.0 - clamp(min(b.x, b.y) - 1.5, 0.0, 1.0);
+  float r = length((vUV - 0.5) * vec2(uAspect, 1.0));
+  float circle = 1.0 - clamp(abs(r - 0.4) / fwidth(r) - 0.5, 0.0, 1.0);
+  vec2 cc = abs(vUV - 0.5) / fwidth(vUV);
+  float cross = 1.0 - clamp(min(cc.x, cc.y) - 0.5, 0.0, 1.0);
+  vec3 c = vec3(0.28) * grid;
+  c = max(c, vec3(0.2, 0.75, 1.0) * max(circle, cross));
+  return max(c, vec3(1.0, 0.66, 0.23) * border);`;
+
+export function buildFragment(body) {
+  return `${FRAGMENT_HEADER}\nvec3 anim(float t) {\n  ${body}\n}\n`;
+}

@@ -1,6 +1,6 @@
 // Editor: kreslení oblastí, úpravy bodů, warp, synchronizace s výstupem.
 import { Renderer } from './renderer.js';
-import { ANIMATIONS, getAnimation } from './animations.js';
+import { ANIMATIONS, getAnimation } from './animations/index.js';
 import { squareToQuad, invert3, applyH, isConvexQuad } from './homography.js';
 import {
   CHANNEL_NAME, uid, createDefaultState, normalizeState, loadState, saveState,
