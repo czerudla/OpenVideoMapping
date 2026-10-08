@@ -14,10 +14,13 @@ try {
   hint.innerHTML = `<div><strong>Výstup nelze spustit</strong><br>${err.message}</div>`;
   throw err;
 }
+renderer.prepare(state);
 
 const channel = new BroadcastChannel(CHANNEL_NAME);
 channel.onmessage = (e) => {
-  if (e.data?.type === 'state') state = e.data.state;
+  if (e.data?.type !== 'state') return;
+  renderer.prepare(e.data.state);
+  state = e.data.state;
 };
 
 function report() {
