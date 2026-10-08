@@ -1,7 +1,8 @@
 // Rozpadající se zeď – cihlová zeď, ze které se cihly uvolňují a padají, a pak se znovu postaví.
 // Cyklus 12 s: klid, rozpad od středu, tma, stavba v opačném pořadí. A = cihly, B = malta.
-// Každý pixel vyhodnotí jen okolní buňky: 3 sloupce v řadách od 5 nad sebou po 1 pod sebou.
-// Padající cihla zhasne dřív, než by zasáhla dál než do 5. řady pod sebou, takže se nikde neřeže.
+// Každý pixel vyhodnotí jen okolní buňky: 3 sloupce v řadách od 5 nad sebou po 3 pod sebou.
+// Padající cihla zhasne dřív, než by zasáhla dál než do 5. řady pod sebou, a stavící se cihla je
+// posunutá nejvýš o 2,8 řady nahoru, takže se nikde neřeže.
 export default {
   id: 'bricks',
   name: 'Rozpadající se zeď',
@@ -16,7 +17,7 @@ export default {
   vec3 cS = vec3(0.0);
   vec3 cM = vec3(0.0);
   float aM = 0.0;
-  for (int k = 5; k >= -1; k--) {
+  for (int k = 5; k >= -3; k--) {
     int j = R - k;
     if (j < 0 || j > 13) continue;
     float odd = mod(float(j), 2.0);
@@ -41,7 +42,7 @@ export default {
         mv = false;
       } else if (tt >= arr - 0.5) {
         float u = (tt - (arr - 0.5)) / 0.5;
-        off.y = -3.0 * rh * (1.0 - u * u);
+        off.y = -2.8 * rh * (1.0 - u * u);
         rot = sg * 0.15 * (1.0 - u);
         vis = smoothstep(0.0, 0.3, u);
       } else if (tt >= rel + 0.45) {
