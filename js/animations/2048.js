@@ -178,6 +178,7 @@ export default {
       const b = boardSize(points, aspect);
       return { w: b.w, h: b.h + 1 };
     },
+    format: 'rgba8',
     stepsPerSecond: 3,
     stepsPerCycle: 4000,
     init(grid, w, h, seed) {
