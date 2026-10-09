@@ -13,6 +13,17 @@ const TO_CLIP = [2, 0, -1, 0, -2, 1, 0, 0, 1];
 // Musí odpovídat MAX_POLY v FRAGMENT_HEADER.
 const MAX_POLY = 64;
 
+// Omezení stavové simulace (`sim`): největší mřížka a čas na simulaci všech oblastí za snímek.
+const MAX_SIM_SIZE = 256;
+const SIM_BUDGET_MS = 4;
+
+// Otisk textu (FNV-1a), z něj se odvozuje seed simulace.
+function hashString(str) {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < str.length; i++) h = Math.imul(h ^ str.charCodeAt(i), 0x01000193);
+  return h >>> 0;
+}
+
 function hexToRgb(hex) {
   const n = parseInt(String(hex).replace('#', ''), 16) || 0;
   return [((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255];
@@ -31,6 +42,9 @@ export class Renderer {
     this.polyCache = new WeakMap();
     this.polyWarned = false;
     this.precomputed = new Map(); // shape.id → { key, data, count }
+    this.sims = new Map(); // shape.id → stav simulace oblasti (viz prepareSim)
+    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+    this.dummyTex = this.createStateTexture(1, 1);
     this.buffer = gl.createBuffer();
     this.vao = gl.createVertexArray();
     gl.bindVertexArray(this.vao);
@@ -76,9 +90,10 @@ export class Renderer {
       gl.linkProgram(p);
       if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p));
       const u = {};
-      for (const name of ['uH', 'uBBox', 'uTime', 'uBright', 'uAspect', 'uColA', 'uColB', 'uPoly', 'uPolyCount', 'uDataCount'])
+      for (const name of ['uH', 'uBBox', 'uTime', 'uBright', 'uAspect', 'uColA', 'uColB', 'uPoly', 'uPolyCount', 'uDataCount', 'uStateSize', 'uStateFrac'])
         u[name] = gl.getUniformLocation(p, name);
       u.uData = gl.getUniformLocation(p, 'uData');
+      u.uState = gl.getUniformLocation(p, 'uState');
       entry = { p, u };
     } catch (err) {
       console.error(`Shader „${id}“ se nepodařilo zkompilovat:`, err);
@@ -97,8 +112,99 @@ export class Renderer {
       this.polyData(shape);
       alive.add(shape.id);
       this.precompute(shape, aspect);
+      this.prepareSim(shape, aspect);
     }
     for (const id of this.precomputed.keys()) if (!alive.has(id)) this.precomputed.delete(id);
+    for (const id of [...this.sims.keys()]) if (!alive.has(id)) this.dropSim(id);
+  }
+
+  createStateTexture(w, h) {
+    const gl = this.gl;
+    const tex = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.texStorage2D(gl.TEXTURE_2D, 1, gl.R8, w, h);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    return tex;
+  }
+
+  dropSim(id) {
+    const st = this.sims.get(id);
+    if (st?.tex) this.gl.deleteTexture(st.tex);
+    this.sims.delete(id);
+  }
+
+  // Připraví stav volitelné simulace animace (`sim`): mřížku, dvě pole a texturu.
+  // Vše se alokuje tady (při změně bodů, animace nebo poměru stran), nikdy v render().
+  prepareSim(shape, aspect) {
+    const sim = ANIMATIONS.find((a) => a.id === shape.anim)?.sim;
+    if (!sim) {
+      this.dropSim(shape.id);
+      return;
+    }
+    const key = `${shape.anim}|${aspect}|${shape.points.join(';')}`;
+    if (this.sims.get(shape.id)?.key === key) return;
+    this.dropSim(shape.id);
+    const st = { key, sim, failed: true, w: 0, h: 0, a: null, b: null, tex: null, step: 0, cycle: -1, frac: 0, points: null, seedBase: hashString(key), aspect };
+    this.sims.set(shape.id, st);
+    try {
+      const points = shape.points.map((p) => [p[0], p[1]]);
+      const size = sim.size(points, aspect);
+      const w = size?.w, h = size?.h;
+      if (!Number.isInteger(w) || !Number.isInteger(h) || w < 1 || h < 1 || w > MAX_SIM_SIZE || h > MAX_SIM_SIZE) {
+        throw new Error(`size() musí vrátit celá čísla w a h v rozsahu 1–${MAX_SIM_SIZE}`);
+      }
+      st.w = w;
+      st.h = h;
+      st.a = new Uint8Array(w * h);
+      st.b = new Uint8Array(w * h);
+      st.tex = this.createStateTexture(w, h);
+      st.points = points;
+      st.failed = false;
+    } catch (err) {
+      console.error(`Simulace animace „${shape.anim}“ se nepodařila připravit, oblast se vykreslí bez ní:`, err);
+    }
+  }
+
+  // Dopočítá stav simulace oblasti na krok odpovídající času t (v sekundách, včetně rychlosti)
+  // a nahraje ho do textury. Krokuje jen do `deadline` (performance.now()), zbytek se dohoní
+  // v dalších snímcích. Vrací true, pokud je simulace použitelná.
+  advanceSim(shape, st, t, deadline) {
+    if (st.failed) return false;
+    const { sim } = st;
+    const pos = Math.max(0, t * sim.stepsPerSecond);
+    if (!Number.isFinite(pos)) return true;
+    const target = Math.floor(pos);
+    const cycle = Math.floor(target / sim.stepsPerCycle);
+    const cycleStart = cycle * sim.stepsPerCycle;
+    let dirty = false;
+    try {
+      if (st.cycle !== cycle || st.step < cycleStart || st.step > target) {
+        const seed = (st.seedBase ^ Math.imul(cycle + 1, 0x9e3779b1)) >>> 0;
+        st.a.fill(0);
+        sim.init(st.a, st.w, st.h, seed, st.points, st.aspect);
+        st.cycle = cycle;
+        st.step = cycleStart;
+        dirty = true;
+      }
+      while (st.step < target && performance.now() < deadline) {
+        sim.step(st.a, st.b, st.w, st.h, st.step - cycleStart);
+        const tmp = st.a; st.a = st.b; st.b = tmp;
+        st.step++;
+        dirty = true;
+      }
+    } catch (err) {
+      st.failed = true;
+      console.error(`Simulace animace „${shape.anim}“ selhala a byla pro oblast vypnuta:`, err);
+      return false;
+    }
+    const gl = this.gl;
+    gl.bindTexture(gl.TEXTURE_2D, st.tex);
+    if (dirty) gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, st.w, st.h, gl.RED, gl.UNSIGNED_BYTE, st.a);
+    st.frac = st.step === target ? pos - target : 0;
+    return true;
   }
 
   // Vrcholy oblasti pro uniformu uPoly. Pole se vytváří jednou pro oblast,
@@ -178,6 +284,7 @@ export class Renderer {
     const H = toColumnMajor(mul3(TO_CLIP, squareToQuad(state.corners)));
     const aspect = state.resolution.w / state.resolution.h;
     const time = (nowMs - state.startTime) / 1000;
+    const simDeadline = performance.now() + SIM_BUDGET_MS;
     gl.bindVertexArray(this.vao);
     gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);
 
@@ -196,6 +303,8 @@ export class Renderer {
     for (const shape of state.shapes) {
       if (!shape.visible || shape.points.length < 3) continue;
       const n = shape.points.length;
+      const simState = this.sims.get(shape.id);
+      const simOk = simState ? this.advanceSim(shape, simState, time * shape.speed, simDeadline) : false;
       let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
       const data = new Float32Array(n * 2 + 8);
       shape.points.forEach(([x, y], i) => {
@@ -233,6 +342,11 @@ export class Renderer {
       const pre = this.precomputed.get(shape.id);
       gl.uniform1i(prog.u.uDataCount, pre ? pre.count : 0);
       if (pre && pre.count > 0) gl.uniform4fv(prog.u.uData, pre.data);
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, simOk ? simState.tex : this.dummyTex);
+      if (prog.u.uState) gl.uniform1i(prog.u.uState, 0);
+      if (prog.u.uStateSize) gl.uniform2f(prog.u.uStateSize, simOk ? simState.w : 0, simOk ? simState.h : 0);
+      if (prog.u.uStateFrac) gl.uniform1f(prog.u.uStateFrac, simOk ? simState.frac : 0);
       gl.drawArrays(gl.TRIANGLE_FAN, n, 4);
 
       if (state.calibration) {
