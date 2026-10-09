@@ -142,8 +142,8 @@ export default {
     return vec3(1.0) * (1.0 - smoothstep(0.5 - aa, 0.5 + aa, edge));
   }
   float fill = 1.0 - smoothstep(0.46 - aa, 0.46 + aa, edge);
-  float t = clamp((v.r * 255.0 - 1.0) / 254.0, 0.0, 1.0);
-  vec3 col = v.r > 0.0 ? mix(uColA, uColB, t) : vec3(0.0);
+  float k = clamp((v.r * 255.0 - 1.0) / 254.0, 0.0, 1.0);
+  vec3 col = v.r > 0.0 ? mix(uColA, uColB, k) : vec3(0.0);
   col = mix(col, vec3(1.0), v.b * v.b * 0.7);
   return col * fill;`,
 };
