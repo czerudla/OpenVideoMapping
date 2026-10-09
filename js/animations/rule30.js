@@ -50,10 +50,11 @@ export default {
     },
   },
   glsl: `float rows = uStateSize.y - 1.0;
+  float aa = max(fwidth(vLocal.y * rows), 0.01); // derivace před předčasnými return
   if (uStateSize.x <= 0.0 || rows < 1.0) return vec3(0.0);
-  // nejnovější řádek je nahoře, obraz je o (1 - uStateFrac) řádku níž a plynule se posouvá
-  float s = vLocal.y * rows - (1.0 - uStateFrac);
-  if (s < 0.0) return vec3(0.0);
+  // nejnovější řádek je nahoře a s rostoucím uStateFrac plynule jede dolů
+  float s = vLocal.y * rows + (1.0 - uStateFrac);
+  if (s < 0.0 || s >= rows) return vec3(0.0);
   float k = floor(s);
   float head = floor(texelFetch(uState, ivec2(0, int(rows)), 0).r * 255.0 + 0.5);
   float row = mod(head - k, rows);
@@ -62,7 +63,6 @@ export default {
   if (v < 0.5) return vec3(0.0);
   // zaoblený čtverec s drobnou mezerou
   vec2 f = vec2(fract(vLocal.x * uStateSize.x), fract(s)) - 0.5;
-  float aa = max(fwidth(s), 0.01);
   float d = length(max(abs(f) - 0.36, 0.0)) - 0.08;
   float fill = 1.0 - smoothstep(-aa, aa, d);
   return mix(uColA, uColB, clamp(s / rows, 0.0, 1.0)) * fill;`,
