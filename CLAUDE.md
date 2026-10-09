@@ -30,7 +30,8 @@ js/app.js           logika editoru: nástroje, kreslení, úpravy bodů, warp, u
 js/output.js        výstupní okno: fullscreen, wake lock, hlášení rozlišení editoru
 js/renderer.js      WebGL2 renderer (stencil maska oblastí + perspektivní transformace)
 js/shaders.js       sdílený kód shaderů (VERTEX_SHADER, FRAGMENT_HEADER, CALIBRATION_GLSL, buildFragment)
-js/animations/      jedna animace na soubor (<id>.js) + index.js (ANIMATIONS, getAnimation; načítá animace podle manifestu)
+js/animations/      jedna animace na soubor (<id>.js) + index.js (ANIMATIONS, GROUPS, getAnimation; načítá animace podle manifestu)
+js/animation-groups.js  skupiny animací v pořadí zobrazení v editoru (ANIMATION_GROUPS); není animace
 scripts/animations-manifest.js  sdílená funkce manifestu animací (server, build, kontrola)
 scripts/build-animations-manifest.js  zapíše js/animations/manifest.json (npm run build:manifest, Vercel)
 scripts/check-animations.js  kontrola souborů animací (npm run check:animations)
@@ -48,7 +49,7 @@ Upravuj jen soubory v `js/`. Kořenové kopie neměň a nemaž je, pokud to zad�
 - **Stav:** jediný objekt `state` (viz `createDefaultState` v `state.js`). Každá změna stavu v editoru jde přes `commit()`, které ho rozešle výstupu a s debounce uloží. Před uživatelskou změnou volej `snapshot()`, jinak nebude fungovat undo.
 - **Komunikace editor ↔ výstup:** `BroadcastChannel('videomapping')`, zprávy `{type:'state'}`, `{type:'hello'}` a `{type:'screen', w, h, fullscreen}`. Výstup je pasivní, jen vykresluje přijatý stav.
 - **Perzistence a kompatibilita:** projekty v localStorage (`videomapping.project.v1`) a exportované JSON soubory se musí dát načíst i po změně. Nová pole přidávej s výchozí hodnotou do `createDefaultState` a `normalizeState`. Při nekompatibilní změně zvyš `version` a doplň migraci do `normalizeState`, starý formát nikdy nezahazuj.
-- **Animace:** nová animace je nový soubor `js/animations/<id>.js` s výchozím exportem `{id, name, colors, glsl}` (`id` = název souboru). Nic jiného se nepřidává, `index.js` neupravuj: seznam souborů dodává generovaný manifest `js/animations/manifest.json` (necommituje se, server ho vytváří za běhu). Před PR spusť `npm run check:animations`. Dostupné proměnné a funkce jsou popsané v README. `id` existující animace neměň, ukládá se do projektů.
+- **Animace:** nová animace je nový soubor `js/animations/<id>.js` s výchozím exportem `{id, name, group, colors, glsl}` (`id` = název souboru, `group` = povinné `id` skupiny z `js/animation-groups.js`; bez platné skupiny `check:animations` selže). Skupina se neukládá do projektu, odvozuje se z `anim`. Nová skupina je vědomé rozhodnutí, přidává se do `js/animation-groups.js`. Nic jiného se nepřidává, `index.js` neupravuj: seznam souborů dodává generovaný manifest `js/animations/manifest.json` (necommituje se, server ho vytváří za běhu). Před PR spusť `npm run check:animations`. Dostupné proměnné a funkce jsou popsané v README. `id` existující animace neměň, ukládá se do projektů.
 - **Server:** naslouchá jen na `127.0.0.1`. PJLink most přeposílá pouze příkazy ze seznamu `ALLOWED` a validuje host. Tato bezpečnostní omezení nesmí žádná změna oslabit.
 
 ## Konvence kódu
@@ -75,6 +76,7 @@ Průběh řídí GitHub Issues a labely. O schválení vždy rozhoduje člověk 
 ### Agent pro zadání
 
 - Z nápadu udělej issue v tomto tvaru: **Cíl** (proč), **Popis chování**, **Akceptační kritéria** (ověřitelný checklist), **Dotčené soubory**, **Mimo rozsah**, **Otevřené otázky**.
+- V každém zadání nové animace uveď i její skupinu (`group`, viz `js/animation-groups.js`).
 - Jedno issue odpovídá jednomu PR. Větší nápad rozděl na menší issues a propoj je („závisí na #N“).
 - Nastav label `spec-ready`. Label `approved` nikdy nenastavuj.
 
