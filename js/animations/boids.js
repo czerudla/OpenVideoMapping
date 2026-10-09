@@ -48,6 +48,7 @@ function sample(arr, w, fw, fh, sx, sy, x, y) {
 
 export default {
   id: 'boids',
+  group: 'sim',
   name: 'Hejno',
   colors: 2,
   sim: {

@@ -1,6 +1,7 @@
 // Matrix – svislé proudy procedurálních znaků stékají shora dolů, jasná hlava a slábnoucí ocas.
 export default {
   id: 'matrix',
+  group: 'retro',
   name: 'Matrix',
   colors: 2,
   glsl: `const vec2 CELL = vec2(0.0175, 0.025);

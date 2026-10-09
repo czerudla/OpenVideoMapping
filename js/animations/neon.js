@@ -1,6 +1,7 @@
 // Neonový obrys – svítící trubice podél obvodu oblasti s jádrem, září, bzučením a občasným zablikáním.
 export default {
   id: 'neon',
+  group: 'outline',
   name: 'Neonový obrys',
   colors: 2,
   glsl: `float m = min(uAspect, 1.0);

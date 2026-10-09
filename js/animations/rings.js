@@ -1,6 +1,7 @@
 // Kruhy – soustředné kruhy šířící se od středu oblasti.
 export default {
   id: 'rings',
+  group: 'basic',
   name: 'Kruhy',
   colors: 2,
   glsl: `float d = length(vLocal - 0.5);

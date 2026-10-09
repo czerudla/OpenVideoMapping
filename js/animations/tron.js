@@ -137,6 +137,7 @@ function startRound(g, w, fh, rand) {
 
 export default {
   id: 'tron',
+  group: 'games',
   name: 'Tron – světelné motorky',
   colors: 2,
   sim: {

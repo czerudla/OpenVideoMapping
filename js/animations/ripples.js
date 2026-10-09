@@ -49,6 +49,7 @@ function drop(dst, w, h, seed, key, kind) {
 
 export default {
   id: 'ripples',
+  group: 'nature',
   name: 'Vodní hladina',
   colors: 2,
   sim: {

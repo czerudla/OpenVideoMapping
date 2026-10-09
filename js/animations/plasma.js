@@ -1,6 +1,7 @@
 // Plazma – prolínající se sinusové vzory.
 export default {
   id: 'plasma',
+  group: 'basic',
   name: 'Plazma',
   colors: 2,
   glsl: `vec2 p = vUV * vec2(uAspect, 1.0) * 4.0;

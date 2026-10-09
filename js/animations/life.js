@@ -70,6 +70,7 @@ function fillPattern(grid, w, h, seed) {
 
 export default {
   id: 'life',
+  group: 'automata',
   name: 'Hra života',
   colors: 2,
   sim: {

@@ -43,6 +43,7 @@ function seedGrid(grid, n, mask, edge, rand) {
 
 export default {
   id: 'frost',
+  group: 'sim',
   name: 'Mráz na skle',
   colors: 2,
   sim: {

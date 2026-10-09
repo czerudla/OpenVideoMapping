@@ -4,6 +4,7 @@ import { existsSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import path from 'node:path';
 import { ANIMATIONS_DIR, buildManifest } from './animations-manifest.js';
+import { ANIMATION_GROUPS } from '../js/animation-groups.js';
 import { SIM_FORMATS } from '../js/sim-utils.js';
 
 const errors = [];
@@ -39,6 +40,11 @@ for (const f of files) {
   }
   if (a.colors !== undefined && ![0, 1, 2].includes(a.colors)) {
     errors.push(`Soubor ${f}: pole „colors“ musí být 0, 1 nebo 2.`);
+  }
+  if (a.group === undefined || a.group === null || a.group === '') {
+    errors.push(`Soubor ${f}: chybí pole „group“.`);
+  } else if (!ANIMATION_GROUPS.some((g) => g.id === a.group)) {
+    errors.push(`Soubor ${f}: neznámá skupina „${a.group}“ (platné skupiny jsou v js/animation-groups.js).`);
   }
   if (a.precompute !== undefined && typeof a.precompute !== 'function') {
     errors.push(`Soubor ${f}: pole „precompute“ musí být funkce.`);

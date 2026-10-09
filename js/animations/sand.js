@@ -22,6 +22,7 @@ function hash2(a, b) {
 
 export default {
   id: 'sand',
+  group: 'sim',
   name: 'Přesýpací písek',
   colors: 2,
   sim: {

@@ -1,6 +1,7 @@
 // Padající míčky – kulaté míčky padají shora, odskakují od spodního okraje oblasti a mizí.
 export default {
   id: 'balls',
+  group: 'show',
   name: 'Padající míčky',
   colors: 2,
   glsl: `const float COLS = 7.0;

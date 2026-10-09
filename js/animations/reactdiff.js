@@ -42,6 +42,7 @@ function ensureScratch(n) {
 
 export default {
   id: 'reactdiff',
+  group: 'sim',
   name: 'Reakce a difuze',
   colors: 2,
   sim: {

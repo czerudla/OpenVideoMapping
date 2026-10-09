@@ -16,6 +16,7 @@ function precompute(points, aspect) {
 
 export default {
   id: 'fireworks',
+  group: 'show',
   name: 'Ohňostroj',
   colors: 2,
   precompute,

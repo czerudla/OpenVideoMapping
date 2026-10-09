@@ -124,6 +124,7 @@ function bounceOffPaddle(g, o, w, bx, padX, hw) {
 
 export default {
   id: 'breakout',
+  group: 'games',
   name: 'Breakout',
   colors: 2,
   sim: {

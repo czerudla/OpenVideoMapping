@@ -19,6 +19,7 @@ function nextRow(src, dst, w, from, to, rule) {
 
 export default {
   id: 'rule30',
+  group: 'automata',
   name: 'Elementární automat',
   colors: 2,
   sim: {

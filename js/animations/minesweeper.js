@@ -244,6 +244,7 @@ const arr = (name, values) => `const int ${name}[${values.length}] = int[${value
 
 export default {
   id: 'minesweeper',
+  group: 'games',
   name: 'Hledání min',
   colors: 2,
   sim: {

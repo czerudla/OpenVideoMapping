@@ -5,6 +5,7 @@
 // posunutá nejvýš o 2,8 řady nahoru, takže se nikde neřeže.
 export default {
   id: 'bricks',
+  group: 'show',
   name: 'Rozpadající se zeď',
   colors: 2,
   glsl: `vec2 sz = fwidth(vUV) / max(fwidth(vLocal), vec2(1e-9)) * vec2(uAspect, 1.0);

@@ -229,6 +229,7 @@ function chooseMove(g, w, h, base, len, grow) {
 
 export default {
   id: 'snakeai',
+  group: 'games',
   name: 'Had (volný)',
   colors: 2,
   sim: {

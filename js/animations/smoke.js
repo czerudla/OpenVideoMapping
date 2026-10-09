@@ -164,6 +164,7 @@ function project(u, v, src, w, h) {
 
 export default {
   id: 'smoke',
+  group: 'nature',
   name: 'Kouř',
   colors: 2,
   sim: {

@@ -1,6 +1,7 @@
 // Třpyt – náhodně blikající body.
 export default {
   id: 'sparkle',
+  group: 'basic',
   name: 'Třpyt',
   colors: 2,
   glsl: `vec2 g = floor(vUV * vec2(uAspect, 1.0) * 50.0);
