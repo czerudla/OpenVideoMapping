@@ -1,11 +1,13 @@
 // Polární záře – vlnící se závěsy světla se svislými paprsky nad noční oblohou s hvězdami.
-// A = hlavní barva záře u spodního okraje, B = barva horních okrajů závěsů.
+// Rozložení se vztahuje k ohraničení oblasti (vLocal). A = hlavní barva záře u spodního okraje, B = barva horních okrajů závěsů.
 export default {
   id: 'aurora',
   name: 'Polární záře',
   colors: 2,
-  glsl: `vec2 p = vUV * vec2(uAspect, 1.0);
-  float h = 1.0 - vUV.y;
+  glsl: `vec2 bbox = fwidth(vUV) / max(fwidth(vLocal), vec2(1e-9));
+  vec2 size = bbox * vec2(uAspect, 1.0);
+  vec2 p = vLocal * vec2(size.x / max(size.y, 1e-6), 1.0);
+  float h = 1.0 - vLocal.y;
   vec3 sky = mix(vec3(0.004, 0.006, 0.02), vec3(0.015, 0.03, 0.07), pow(1.0 - h, 2.0));
   vec2 cell = floor(p * 90.0);
   float r = hash(cell);
