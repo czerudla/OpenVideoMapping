@@ -75,6 +75,8 @@ export default {
 
   vec3 col = vec3(0.0);
   vec3 headCol = mix(uColA, vec3(1.0), 0.45);
+  // Výchozí barva B je černá (jídlo by nebylo vidět), proto se v tom případě použije bílá.
+  vec3 foodCol = max(uColB.r, max(uColB.g, uColB.b)) < 0.05 ? vec3(1.0) : uColB;
   float aa = 0.0015;
   float arc = polyArc(vUV);
   float k0 = floor(arc / cell);
@@ -114,7 +116,7 @@ export default {
         col = mix(col, vec3(0.0), eye * show);
       }
     } else {
-      col = mix(col, uColB, box * step(0.4, fract(t * 3.0)));
+      col = mix(col, foodCol, box * step(0.4, fract(t * 3.0)));
     }
   }
   return col;`,
