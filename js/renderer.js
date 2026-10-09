@@ -15,6 +15,13 @@ const MAX_POLY = 64;
 
 // Omezení stavové simulace (`sim`): největší mřížka a čas na simulaci všech oblastí za snímek.
 const MAX_SIM_SIZE = 256;
+
+// Formáty stavu simulace (`sim.format`): pole v JS, počet kanálů a parametry textury.
+const SIM_FORMAT_INFO = {
+  r8: { Arr: Uint8Array, ch: 1, internal: 'R8', format: 'RED', type: 'UNSIGNED_BYTE' },
+  rgba8: { Arr: Uint8Array, ch: 4, internal: 'RGBA8', format: 'RGBA', type: 'UNSIGNED_BYTE' },
+  rgba32f: { Arr: Float32Array, ch: 4, internal: 'RGBA32F', format: 'RGBA', type: 'FLOAT' },
+};
 const SIM_BUDGET_MS = 4;
 
 // Otisk textu (FNV-1a), z něj se odvozuje seed simulace.
@@ -118,11 +125,11 @@ export class Renderer {
     for (const id of [...this.sims.keys()]) if (!alive.has(id)) this.dropSim(id);
   }
 
-  createStateTexture(w, h) {
+  createStateTexture(w, h, format = 'r8') {
     const gl = this.gl;
     const tex = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, tex);
-    gl.texStorage2D(gl.TEXTURE_2D, 1, gl.R8, w, h);
+    gl.texStorage2D(gl.TEXTURE_2D, 1, gl[SIM_FORMAT_INFO[format].internal], w, h);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
@@ -136,7 +143,7 @@ export class Renderer {
     this.sims.delete(id);
   }
 
-  // Připraví stav volitelné simulace animace (`sim`): mřížku, dvě pole a texturu.
+  // Připraví stav volitelné simulace animace (`sim`): mřížku, dvě pole a texturu ve formátu `sim.format`.
   // Vše se alokuje tady (při změně bodů, animace nebo poměru stran), nikdy v render().
   prepareSim(shape, aspect) {
     const sim = ANIMATIONS.find((a) => a.id === shape.anim)?.sim;
@@ -147,7 +154,7 @@ export class Renderer {
     const key = `${shape.anim}|${aspect}|${shape.points.join(';')}`;
     if (this.sims.get(shape.id)?.key === key) return;
     this.dropSim(shape.id);
-    const st = { key, sim, failed: true, w: 0, h: 0, a: null, b: null, tex: null, step: 0, cycle: -1, frac: 0, points: null, seedBase: hashString(key), aspect };
+    const st = { key, sim, failed: true, w: 0, h: 0, info: null, a: null, b: null, tex: null, step: 0, cycle: -1, frac: 0, points: null, seedBase: hashString(key), aspect };
     this.sims.set(shape.id, st);
     try {
       const points = shape.points.map((p) => [p[0], p[1]]);
@@ -158,9 +165,13 @@ export class Renderer {
       }
       st.w = w;
       st.h = h;
-      st.a = new Uint8Array(w * h);
-      st.b = new Uint8Array(w * h);
-      st.tex = this.createStateTexture(w, h);
+      const format = sim.format ?? 'r8';
+      const info = SIM_FORMAT_INFO[format];
+      if (!info) throw new Error(`neplatný formát stavu „${format}“, povolené jsou ${Object.keys(SIM_FORMAT_INFO).join(', ')}`);
+      st.info = info;
+      st.a = new info.Arr(w * h * info.ch);
+      st.b = new info.Arr(w * h * info.ch);
+      st.tex = this.createStateTexture(w, h, format);
       st.points = points;
       st.failed = false;
     } catch (err) {
@@ -202,7 +213,7 @@ export class Renderer {
     }
     const gl = this.gl;
     gl.bindTexture(gl.TEXTURE_2D, st.tex);
-    if (dirty) gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, st.w, st.h, gl.RED, gl.UNSIGNED_BYTE, st.a);
+    if (dirty) gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, st.w, st.h, gl[st.info.format], gl[st.info.type], st.a);
     st.frac = st.step === target ? pos - target : 0;
     return true;
   }
