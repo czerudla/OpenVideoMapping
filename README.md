@@ -148,7 +148,61 @@ export default {
 - Mřížka je nejvýše 256 × 256 buněk. Pole `src`/`dst` i textura se alokují předem, `init` a `step` by neměly alokovat nic velkého.
 - Simulace všech oblastí smí za snímek zabrat nejvýše ~4 ms. Zbývající kroky se dopočítají v dalších snímcích, takže stav může po načtení stránky nebo skoku rychlosti krátce „dobíhat“. Při změně cyklu se rovnou volá `init`.
 - Výjimka v `size`, `init` nebo `step` se vypíše do konzole (jednou), simulace se pro oblast vypne (`uStateSize = 0`) a oblast se dál vykresluje.
-- `npm run check:animations` ověří, že `sim` má funkce `size`, `init`, `step` a kladná čísla `stepsPerSecond` a `stepsPerCycle`.
+- `npm run check:animations` ověří, že `sim` má funkce `size`, `init`, `step`, kladná čísla `stepsPerSecond` a `stepsPerCycle` a platný `format`.
+- **Veškerý stav simulace musí být v polích `src`/`dst`**, ne v proměnných modulu ani v uzávěru. Jedna animace může běžet ve více oblastech současně a modul je sdílený, takže by se stav mezi oblastmi míchal a nedal by se obnovit při dobíhání od začátku cyklu. Předalokované pomocné buffery v modulu jsou povolené jen jako dočasná paměť v rámci jednoho volání `step` (např. fronta pro BFS). Když stav potřebuje víc než jeden bajt na buňku, použijte `rgba8` nebo `rgba32f`, případně vyhrazený řádek mřížky.
+
+#### Formát stavu (`sim.format`)
+
+Volitelné pole `format` určuje typ pole i textury (výchozí je `'r8'`, starší animace se nemění):
+
+| `format` | pole v JS | textura | použití |
+|---|---|---|---|
+| `'r8'` (výchozí) | `Uint8Array(w*h)` | `R8` | buněčné automaty |
+| `'rgba8'` | `Uint8Array(w*h*4)` | `RGBA8` | víc malých hodnot na buňku |
+| `'rgba32f'` | `Float32Array(w*h*4)` | `RGBA32F` | fyzika (vlny, difuze), agenti |
+
+- Pro `rgba*` je hodnota buňky `(x, y)` na indexu `(y*w + x)*4 + kanál` (kanály R, G, B, A = 0–3). `init` a `step` dostávají pole odpovídajícího typu a délky.
+- Textura je vždy `NEAREST` a `CLAMP_TO_EDGE`, ve shaderu zůstává `uniform sampler2D uState`. Pro `r8` a `rgba8` se čte rozsah 0–1, pro `rgba32f` přímo hodnoty float (i záporné).
+- Neplatný `format` vypíše registr do konzole (animace se vynechá) a `check:animations` skončí českou chybou.
+- Hladké hodnoty ze stavu se interpolují ve shaderu přes `texelFetch` (lineární filtrování float textur se nepoužívá). Bilineární vzorkování buňkových středů:
+
+```glsl
+vec4 stateBilinear(vec2 uv) {          // uv = vLocal (0–1 v oblasti)
+  vec2 p = uv * uStateSize - 0.5;
+  vec2 i = floor(p), f = p - i;
+  ivec2 hi = ivec2(uStateSize) - 1;
+  ivec2 a = clamp(ivec2(i), ivec2(0), hi);
+  ivec2 b = clamp(ivec2(i) + 1, ivec2(0), hi);
+  return mix(mix(texelFetch(uState, ivec2(a.x, a.y), 0), texelFetch(uState, ivec2(b.x, a.y), 0), f.x),
+             mix(texelFetch(uState, ivec2(a.x, b.y), 0), texelFetch(uState, ivec2(b.x, b.y), 0), f.x), f.y);
+}
+```
+
+#### Agenti v textuře
+
+Agentní simulace (hejno) ukládají každého agenta do jednoho texelu. `size()` vrátí `{ w: N, h: 1 }`, formát je `'rgba32f'` a texel obsahuje `x, y, vx, vy`. Shader prochází agenty ve smyčce s pevnou mezí:
+
+```glsl
+const int MAX_AGENTS = 128;
+float d = 1e9;
+for (int i = 0; i < MAX_AGENTS; i++) {
+  if (i >= int(uStateSize.x)) break;
+  vec4 a = texelFetch(uState, ivec2(i, 0), 0);   // x, y, vx, vy v prostoru 0–1 oblasti
+  d = min(d, length((vLocal - a.xy) * vec2(uAspect, 1.0)));
+}
+return uColA * (1.0 - smoothstep(0.01, 0.015, d));
+```
+
+#### Sdílené funkce `js/sim-utils.js`
+
+Modul leží mimo `js/animations/`, takže ho manifest nenačítá jako animaci. Animace z něj importují (`import { createRandom } from '../sim-utils.js';`):
+
+- `createRandom(seed)` – deterministický generátor (mulberry32), vrací funkci `() => [0, 1)`.
+- `gridSize(points, aspect, longSide)` – `{ w, h }` mřížky se čtvercovými buňkami přes ohraničující obdélník oblasti, `longSide` buněk na delší straně (nejvýše 256).
+- `polygonMask(points, aspect, w, h, out)` – do `out` (`Uint8Array(w*h)`) zapíše 1 pro buňky, jejichž střed leží uvnitř polygonu, jinak 0. Mřížka odpovídá `vLocal`.
+- `boundaryCells(mask, w, h, out)` – označí buňky uvnitř masky sousedící s okrajem masky nebo mřížky (pro animace rostoucí od hran).
+
+Funkce jsou čisté a deterministické a při zadaném `out` nealokují.
 
 ## Možná další rozšíření
 

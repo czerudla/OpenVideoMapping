@@ -2,7 +2,7 @@
 // funkce `vec3 anim(float t)`.
 // K dispozici: vUV (0–1 v celé ploše), vLocal (0–1 v rámci oblasti),
 // uColA, uColB, uAspect, volitelná data z precompute (uData, uDataCount) a pomocné funkce hsv2rgb, hash, noise, fbm.
-// Stav simulace (`sim` animace): uState (R8, NEAREST), uStateSize (w, h; 0 bez simulace), uStateFrac (0–1 mezi kroky).
+// Stav simulace (`sim` animace): uState (R8, RGBA8 nebo RGBA32F podle `sim.format`, NEAREST), uStateSize (w, h; 0 bez simulace), uStateFrac (0–1 mezi kroky).
 // Tvar oblasti: uPoly, uPolyCount a funkce polyDist, polyPerimeter, polyArc, polyPoint.
 
 // Nejvyšší počet vec4 záznamů, které animace může vrátit z precompute().

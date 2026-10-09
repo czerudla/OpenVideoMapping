@@ -1,6 +1,7 @@
 // Registr animací. Seznam souborů dodává manifest (generuje ho server nebo `npm run build:manifest`),
 // takže nová animace = jen nový soubor <id>.js v této složce.
 import solid from './solid.js';
+import { SIM_FORMATS } from '../sim-utils.js';
 
 const REQUIRED = ['id', 'name', 'colors', 'glsl'];
 const FILE_RE = /^[a-z0-9-]+\.js$/;
@@ -15,6 +16,9 @@ function validateSim(sim) {
     if (typeof sim[key] !== 'number' || !Number.isFinite(sim[key]) || sim[key] <= 0) {
       return `pole „sim.${key}“ musí být kladné číslo`;
     }
+  }
+  if (sim.format !== undefined && !SIM_FORMATS.includes(sim.format)) {
+    return `pole „sim.format“ musí být ${SIM_FORMATS.map((f) => `„${f}“`).join(', ')}`;
   }
   return null;
 }

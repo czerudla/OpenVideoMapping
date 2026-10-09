@@ -4,6 +4,7 @@ import { existsSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import path from 'node:path';
 import { ANIMATIONS_DIR, buildManifest } from './animations-manifest.js';
+import { SIM_FORMATS } from '../js/sim-utils.js';
 
 const errors = [];
 
@@ -54,6 +55,9 @@ for (const f of files) {
         if (typeof v !== 'number' || !Number.isFinite(v) || v <= 0) {
           errors.push(`Soubor ${f}: pole „sim.${key}“ musí být kladné číslo.`);
         }
+      }
+      if (a.sim.format !== undefined && !SIM_FORMATS.includes(a.sim.format)) {
+        errors.push(`Soubor ${f}: pole „sim.format“ musí být ${SIM_FORMATS.map((x) => `„${x}“`).join(', ')}.`);
       }
     }
   }

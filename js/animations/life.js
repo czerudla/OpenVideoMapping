@@ -1,6 +1,8 @@
 // Hra života – Conwayův buněčný automat (B3/S23) na torusu, stavová animace (`sim`).
 // Hodnota buňky v textuře: 255 = právě narozená, 232 = živá, 208 a níž = doznívající stopa po mrtvé.
 // Stagnaci (stav se nemění nebo osciluje s periodou 1–2) hlídá `step` z historie uložené mimo mřížku.
+import { createRandom, gridSize } from '../sim-utils.js';
+
 const CELLS_LONG = 64; // buněk na delší straně oblasti
 const BORN = 255;
 const ALIVE = 232;
@@ -35,19 +37,8 @@ const meta = new WeakMap();
 // Seed předaný do `init`, klíčem je mřížka, do které se zapisovalo.
 const seeds = new WeakMap();
 
-function rng(seed) {
-  let a = seed >>> 0;
-  return () => {
-    a = (a + 0x6d2b79f5) >>> 0;
-    let t = a;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
 function randomFill(grid, w, h, seed) {
-  const rand = rng(seed);
+  const rand = createRandom(seed);
   for (let i = 0; i < w * h; i++) grid[i] = rand() < DENSITY ? BORN : 0;
 }
 
@@ -61,7 +52,7 @@ function place(grid, w, h, pat, ox, oy, flipX, flipY) {
 }
 
 function fillPattern(grid, w, h, seed) {
-  const rand = rng(seed ^ 0x5bd1e995);
+  const rand = createRandom(seed ^ 0x5bd1e995);
   const kind = Math.floor(rand() * 4);
   if (kind === 0 && w >= 40 && h >= 12) {
     place(grid, w, h, GUN, 2, 2 + Math.floor(rand() * (h - 11)), false, false);
@@ -84,18 +75,7 @@ export default {
   sim: {
     // Čtvercové buňky: poměr mřížky odpovídá poměru stran ohraničujícího obdélníku oblasti na obrazovce.
     size(points, aspect) {
-      let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
-      for (const [x, y] of points) {
-        x0 = Math.min(x0, x); x1 = Math.max(x1, x);
-        y0 = Math.min(y0, y); y1 = Math.max(y1, y);
-      }
-      const bw = Math.max((x1 - x0) * aspect, 1e-3);
-      const bh = Math.max(y1 - y0, 1e-3);
-      const k = CELLS_LONG / Math.max(bw, bh);
-      return {
-        w: Math.max(1, Math.min(CELLS_LONG, Math.round(bw * k))),
-        h: Math.max(1, Math.min(CELLS_LONG, Math.round(bh * k))),
-      };
+      return gridSize(points, aspect, CELLS_LONG);
     },
     stepsPerSecond: 8,
     stepsPerCycle: 1200,

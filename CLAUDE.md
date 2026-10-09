@@ -34,6 +34,7 @@ js/animations/      jedna animace na soubor (<id>.js) + index.js (ANIMATIONS, ge
 scripts/animations-manifest.js  sdílená funkce manifestu animací (server, build, kontrola)
 scripts/build-animations-manifest.js  zapíše js/animations/manifest.json (npm run build:manifest, Vercel)
 scripts/check-animations.js  kontrola souborů animací (npm run check:animations)
+js/sim-utils.js     sdílené pomůcky stavových animací (createRandom, gridSize, polygonMask, boundaryCells, SIM_FORMATS); není animace
 js/homography.js    homografie 3×3 (řádkové pořadí), inverze, test konvexity
 js/state.js         model projektu, normalizace, ukládání do localStorage
 server/serve.js     statický server + most PJLink (POST /api/pjlink)
