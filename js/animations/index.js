@@ -5,6 +5,20 @@ import solid from './solid.js';
 const REQUIRED = ['id', 'name', 'colors', 'glsl'];
 const FILE_RE = /^[a-z0-9-]+\.js$/;
 
+// Vrátí českou chybu pro neplatné `sim`, nebo null.
+function validateSim(sim) {
+  if (!sim || typeof sim !== 'object') return 'pole „sim“ musí být objekt';
+  for (const fn of ['size', 'init', 'step']) {
+    if (typeof sim[fn] !== 'function') return `pole „sim.${fn}“ musí být funkce`;
+  }
+  for (const key of ['stepsPerSecond', 'stepsPerCycle']) {
+    if (typeof sim[key] !== 'number' || !Number.isFinite(sim[key]) || sim[key] <= 0) {
+      return `pole „sim.${key}“ musí být kladné číslo`;
+    }
+  }
+  return null;
+}
+
 // Vrátí českou chybu, nebo null, pokud je záznam v pořádku.
 function validate(a, seen) {
   if (!a || typeof a !== 'object') return 'záznam není objekt';
@@ -16,6 +30,10 @@ function validate(a, seen) {
   }
   if (a.precompute !== undefined && typeof a.precompute !== 'function') {
     return 'pole „precompute“ musí být funkce';
+  }
+  if (a.sim !== undefined) {
+    const err = validateSim(a.sim);
+    if (err) return err;
   }
   if (![0, 1, 2].includes(a.colors)) return 'pole „colors“ musí být 0, 1 nebo 2';
   if (seen.has(a.id)) return `duplicitní id „${a.id}“`;

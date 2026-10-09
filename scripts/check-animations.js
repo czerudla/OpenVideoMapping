@@ -42,6 +42,21 @@ for (const f of files) {
   if (a.precompute !== undefined && typeof a.precompute !== 'function') {
     errors.push(`Soubor ${f}: pole „precompute“ musí být funkce.`);
   }
+  if (a.sim !== undefined) {
+    if (!a.sim || typeof a.sim !== 'object') {
+      errors.push(`Soubor ${f}: pole „sim“ musí být objekt.`);
+    } else {
+      for (const fn of ['size', 'init', 'step']) {
+        if (typeof a.sim[fn] !== 'function') errors.push(`Soubor ${f}: pole „sim.${fn}“ musí být funkce.`);
+      }
+      for (const key of ['stepsPerSecond', 'stepsPerCycle']) {
+        const v = a.sim[key];
+        if (typeof v !== 'number' || !Number.isFinite(v) || v <= 0) {
+          errors.push(`Soubor ${f}: pole „sim.${key}“ musí být kladné číslo.`);
+        }
+      }
+    }
+  }
   if (a.id !== f.slice(0, -3)) {
     errors.push(`Soubor ${f}: id „${a.id}“ neodpovídá názvu souboru.`);
   }
