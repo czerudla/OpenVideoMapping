@@ -209,6 +209,7 @@ function precompute(points, aspect) {
 
 export default {
   id: 'tetris',
+  group: 'games',
   name: 'Tetris',
   colors: 0,
   precompute,

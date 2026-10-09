@@ -2,6 +2,9 @@
 // takže nová animace = jen nový soubor <id>.js v této složce.
 import solid from './solid.js';
 import { SIM_FORMATS } from '../sim-utils.js';
+import { ANIMATION_GROUPS, FALLBACK_GROUP } from '../animation-groups.js';
+
+const GROUP_IDS = new Set(ANIMATION_GROUPS.map((g) => g.id));
 
 const REQUIRED = ['id', 'name', 'colors', 'glsl'];
 const FILE_RE = /^[a-z0-9-]+\.js$/;
@@ -81,6 +84,11 @@ async function loadAll() {
       console.error(`Animace ${file} byla vynechána: id „${anim.id}“ neodpovídá názvu souboru.`);
       return;
     }
+    if (!GROUP_IDS.has(anim.group)) {
+      const why = anim.group === undefined ? 'chybí pole „group“' : `neznámá skupina „${anim.group}“`;
+      console.error(`Animace ${file}: ${why}, zařazuji do skupiny „${FALLBACK_GROUP.name}“.`);
+      anim.group = FALLBACK_GROUP.id;
+    }
     seen.add(anim.id);
     out.push(anim);
   });
@@ -94,6 +102,11 @@ const { list, error } = await loadAll();
 
 export const ANIMATIONS = list;
 export const ANIMATIONS_ERROR = error;
+
+// Neprázdné skupiny v pořadí z animation-groups.js, „Ostatní“ na konci. Animace jsou už seřazené.
+export const GROUPS = [...ANIMATION_GROUPS, FALLBACK_GROUP]
+  .map((g) => ({ ...g, animations: list.filter((a) => a.group === g.id) }))
+  .filter((g) => g.animations.length > 0);
 
 export function getAnimation(id) {
   return ANIMATIONS.find((a) => a.id === id) ?? ANIMATIONS[0];

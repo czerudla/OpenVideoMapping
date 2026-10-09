@@ -111,6 +111,7 @@ function restart(dst, stepIndex) {
 
 export default {
   id: 'maze',
+  group: 'games',
   name: 'Bludiště',
   colors: 2,
   sim: {

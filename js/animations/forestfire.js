@@ -35,6 +35,7 @@ const isTree = (v) => v >= TREE_MIN && v <= TREE_MAX;
 
 export default {
   id: 'forestfire',
+  group: 'sim',
   name: 'Lesní požár',
   colors: 2,
   sim: {

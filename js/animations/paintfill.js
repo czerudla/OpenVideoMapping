@@ -75,6 +75,7 @@ function startPour(grid, w, gh, g, seedA, seedB) {
 
 export default {
   id: 'paintfill',
+  group: 'sim',
   name: 'Zalévání barvou',
   colors: 2,
   sim: {

@@ -3,6 +3,7 @@
 // se zachovaným poměrem stran, takže jsou kapky kulaté a sousední oblasti tvoří jedno okno.
 export default {
   id: 'rainglass',
+  group: 'nature',
   name: 'Déšť na skle',
   colors: 2,
   glsl: `vec2 p = vec2(vUV.x * uAspect, 1.0 - vUV.y); // y nahoru

@@ -221,6 +221,7 @@ function precompute(points, aspect) {
 
 export default {
   id: 'pong',
+  group: 'games',
   name: 'Pong',
   colors: 2,
   precompute,

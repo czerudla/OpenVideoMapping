@@ -170,6 +170,7 @@ function startGame(grid, w, h, seed) {
 
 export default {
   id: '2048',
+  group: 'games',
   name: '2048',
   colors: 2,
   sim: {

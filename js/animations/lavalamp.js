@@ -2,6 +2,7 @@
 // Počítá se v souřadnicích oblasti se zachovaným poměrem stran, takže jsou kapky kulaté.
 export default {
   id: 'lavalamp',
+  group: 'retro',
   name: 'Lávová lampa',
   colors: 2,
   glsl: `const int BLOBS = 7;

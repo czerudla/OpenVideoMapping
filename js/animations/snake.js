@@ -1,6 +1,7 @@
 // Had (Snake) ze starých Nokií leze po obvodu oblasti po políčkách, sbírá jídlo a roste; po nárazu do ocasu se rozpadne a hra začne znovu.
 export default {
   id: 'snake',
+  group: 'games',
   name: 'Had (Snake)',
   colors: 2,
   glsl: `const float SPEED = 0.25;

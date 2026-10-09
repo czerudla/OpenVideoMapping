@@ -1,6 +1,7 @@
 // Oheň – plameny z fbm šumu.
 export default {
   id: 'fire',
+  group: 'nature',
   name: 'Oheň',
   colors: 2,
   glsl: `float n = fbm(vec2(vLocal.x * 3.0, vLocal.y * 2.0 + t * 1.2));

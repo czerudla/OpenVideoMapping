@@ -1,6 +1,7 @@
 // Pac-Man objíždí obvod oblasti po dráze uvnitř hrany a polyká kuličky; po kole se kuličky obnoví.
 export default {
   id: 'pacman',
+  group: 'games',
   name: 'Pac-Man',
   colors: 2,
   glsl: `const float SPEED = 0.3;

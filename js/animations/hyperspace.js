@@ -4,6 +4,7 @@
 // Hvězdy jsou v polárních buňkách (úhlový výsek × 2 hvězdy × 3 vrstvy), bez smyček přes jednotlivé hvězdy.
 export default {
   id: 'hyperspace',
+  group: 'show',
   name: 'Skok do hyperprostoru',
   colors: 2,
   glsl: `// Střed a velikost oblasti z obdélníku okolo vrcholů.

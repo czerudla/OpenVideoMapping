@@ -1,6 +1,7 @@
 // Řezání autogenem – žhavý hořák objíždí obvod oblasti, za ním chladne spára a lítají jiskry.
 export default {
   id: 'torch',
+  group: 'outline',
   name: 'Řezání autogenem',
   colors: 2,
   glsl: `const float SPEED = 0.25;

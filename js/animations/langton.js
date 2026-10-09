@@ -55,6 +55,7 @@ function newCycleRandom(stepIndex, rule) {
 
 export default {
   id: 'langton',
+  group: 'automata',
   name: 'Langtonův mravenec',
   colors: 2,
   sim: {

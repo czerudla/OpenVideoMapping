@@ -2,6 +2,7 @@
 // Rozložení se vztahuje k ohraničení oblasti (vLocal). A = hlavní barva záře u spodního okraje, B = barva horních okrajů závěsů.
 export default {
   id: 'aurora',
+  group: 'nature',
   name: 'Polární záře',
   colors: 2,
   glsl: `vec2 bbox = fwidth(vUV) / max(fwidth(vLocal), vec2(1e-9));

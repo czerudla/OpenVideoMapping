@@ -159,6 +159,7 @@ function precompute(points, aspect) {
 
 export default {
   id: 'bounce',
+  group: 'outline',
   name: 'Odrážející se míček',
   colors: 2,
   precompute,

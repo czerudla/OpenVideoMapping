@@ -1,6 +1,6 @@
 // Editor: kreslení oblastí, úpravy bodů, warp, synchronizace s výstupem.
 import { Renderer } from './renderer.js';
-import { ANIMATIONS, ANIMATIONS_ERROR, getAnimation } from './animations/index.js';
+import { GROUPS, ANIMATIONS_ERROR, getAnimation } from './animations/index.js';
 import { squareToQuad, invert3, applyH, isConvexQuad } from './homography.js';
 import {
   CHANNEL_NAME, uid, createDefaultState, normalizeState, loadState, saveState,
@@ -511,11 +511,24 @@ if (ANIMATIONS_ERROR) {
   $('anim-error').textContent = ANIMATIONS_ERROR;
   $('anim-error').hidden = false;
 }
-for (const a of ANIMATIONS) {
+const groupSelect = $('p-group');
+for (const g of GROUPS) {
   const o = document.createElement('option');
-  o.value = a.id;
-  o.textContent = a.name;
-  animSelect.append(o);
+  o.value = g.id;
+  o.textContent = g.name;
+  groupSelect.append(o);
+}
+
+// Naplní výběr animace animacemi dané skupiny.
+function fillAnimSelect(groupId) {
+  const group = GROUPS.find((g) => g.id === groupId) ?? GROUPS[0];
+  animSelect.replaceChildren(...group.animations.map((a) => {
+    const o = document.createElement('option');
+    o.value = a.id;
+    o.textContent = a.name;
+    return o;
+  }));
+  groupSelect.value = group.id;
 }
 
 function renderProps() {
@@ -523,7 +536,9 @@ function renderProps() {
   $('props').hidden = !s;
   if (!s) return;
   $('p-name').value = s.name;
-  animSelect.value = s.anim;
+  const anim = getAnimation(s.anim);
+  fillAnimSelect(anim.group);
+  animSelect.value = anim.id;
   $('p-colA').value = s.colA;
   $('p-colB').value = s.colB;
   $('p-speed').value = s.speed;
@@ -557,6 +572,16 @@ bindProp('p-colA', 'colA', String, true);
 bindProp('p-colB', 'colB');
 bindProp('p-speed', 'speed', Number);
 bindProp('p-bright', 'bright', Number);
+groupSelect.addEventListener('change', () => {
+  const s = selectedShape();
+  const group = GROUPS.find((g) => g.id === groupSelect.value);
+  if (!s || !group) return;
+  snapshot();
+  s.anim = group.animations[0].id;
+  renderProps();
+  renderShapeList();
+  commit();
+});
 animSelect.addEventListener('change', () => {
   const s = selectedShape();
   if (!s) return;

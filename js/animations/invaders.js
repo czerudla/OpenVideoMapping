@@ -96,6 +96,7 @@ const ints = (a) => a.join(', ');
 
 export default {
   id: 'invaders',
+  group: 'games',
   name: 'Vesmírní vetřelci',
   colors: 2,
   glsl: `const float STEP = 0.5;   // doba jednoho kroku formace

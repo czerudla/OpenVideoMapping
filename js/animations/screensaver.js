@@ -4,6 +4,7 @@
 // poměru stran oblasti tak, aby dráha byla co nejblíž 45°. Do rohu logo dopadne vždy po půlcyklu.
 export default {
   id: 'screensaver',
+  group: 'retro',
   name: 'Spořič obrazovky',
   colors: 1,
   glsl: `const float PC = 45.0;

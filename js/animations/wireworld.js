@@ -190,6 +190,7 @@ function generate(grid, w, h, seed, mask) {
 
 export default {
   id: 'wireworld',
+  group: 'automata',
   name: 'Wireworld – obvody',
   colors: 2,
   sim: {

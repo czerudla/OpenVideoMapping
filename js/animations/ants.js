@@ -89,6 +89,7 @@ function nb(src, j, c, ch) {
 
 export default {
   id: 'ants',
+  group: 'sim',
   name: 'Mravenci',
   colors: 2,
   sim: {

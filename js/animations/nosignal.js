@@ -1,6 +1,7 @@
 // Porucha signálu: obsah, VHS glitche, sníh a monoskop (cyklus 16 s), mezi fázemi „přepnutí kanálu“.
 export default {
   id: 'nosignal',
+  group: 'retro',
   name: 'Porucha signálu',
   colors: 2,
   glsl: `const float CYCLE = 16.0;

@@ -34,6 +34,7 @@ function spark(grid, w, h, rand) {
 
 export default {
   id: 'briansbrain',
+  group: 'automata',
   name: 'Brian\'s Brain',
   colors: 2,
   sim: {

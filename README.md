@@ -16,7 +16,7 @@ Pak otevřete http://localhost:8080 v Chrome nebo Edge. Firefox funguje také, j
 2. V editoru klikněte na **Otevřít výstup**. Chrome se zeptá na oprávnění ke správě oken; po povolení se výstup otevře přímo na projektoru.
 3. Ve výstupním okně klikněte nebo stiskněte F a přepne se na celou obrazovku. Editor převezme rozlišení projektoru automaticky.
 4. Zapněte **Kalibraci**, zvolte **Warp** a tažením rohů srovnejte mřížku s promítanou plochou.
-5. Nástrojem **Kreslit** obkreslete objekty, na které chcete svítit, a každé oblasti vyberte animaci.
+5. Nástrojem **Kreslit** obkreslete objekty, na které chcete svítit, a každé oblasti vyberte skupinu a v ní animaci.
 
 Projekt se průběžně ukládá do prohlížeče. Tlačítkem **Uložit do souboru** ho zálohujete jako JSON.
 
@@ -57,6 +57,7 @@ js/output.js        výstupní okno, fullscreen, hlášení rozlišení
 js/renderer.js      WebGL2 vykreslování (stencil maska + perspektiva)
 js/shaders.js       sdílený kód shaderů (vertex, hlavička fragmentu, kalibrace)
 js/animations/      animace, jedna na soubor (<id>.js); index.js je načte podle manifestu
+js/animation-groups.js  skupiny animací (pořadí v editoru)
 scripts/            manifest animací (animations-manifest.js, build-animations-manifest.js), check-animations.js
 js/homography.js    výpočet perspektivní transformace
 js/state.js         model projektu a ukládání
@@ -74,12 +75,28 @@ Editor a výstup si stav předávají přes `BroadcastChannel`, takže musí bě
 export default {
   id: 'blink',
   name: 'Mrkání',
+  group: 'basic',
   colors: 2,
   glsl: `return mix(uColB, uColA, step(0.9, fract(t)));`,
 };
 ```
 
 2. Spusťte `npm run check:animations`, který ověří všechny soubory animací. Nic dalšího se nepřidává ani needituje: seznam animací se skládá automaticky (server ho generuje za běhu jako `/js/animations/manifest.json`, pro statický hosting ho vytvoří `npm run build:manifest`). Po obnovení stránky je animace v nabídce. V nabídce je první `solid`, ostatní jsou seřazené podle názvu.
+
+`group` je povinné `id` skupiny. V editoru se nejdřív vybere skupina („Skupina“) a potom animace z ní („Animace“); změna skupiny hned přiřadí oblasti první animaci skupiny (jde vrátit jedním Ctrl+Z). Prázdné skupiny se nezobrazují. Skupina se neukládá do projektu, odvozuje se z animace. Animace bez `group` nebo s neznámou skupinou se zařadí do skupiny „Ostatní“ s chybou v konzoli a `npm run check:animations` skončí chybou.
+
+| `id` | Skupina | Obsah |
+|---|---|---|
+| `basic` | Základní | jednoduché barevné a pohybové efekty |
+| `outline` | Obrysy a hrany | efekty sledující obvod a hrany oblasti |
+| `nature` | Příroda a živly | oheň, voda, obloha, počasí, kouř |
+| `show` | Show a oslavy | velké efektní momenty na akce |
+| `retro` | Retro a popkultura | pocty filmům, televizi a počítačům |
+| `games` | Hry | automaticky hrané hry |
+| `sim` | Simulace | simulace a algoritmy |
+| `automata` | Buněčné automaty | Hra života a příbuzné automaty |
+
+Skupiny jsou definované v `js/animation-groups.js`. Novou skupinu přidáte tam jedním záznamem `{ id, name }` na požadované místo v poli (pořadí určuje pořadí v editoru). Je to vědomé rozhodnutí, seznam se mění zřídka; doplňte ji i do tabulky výše.
 
 `colors` je počet barev, které animace používá (0–2). `id` je neměnné, ukládá se do projektů. Vadný záznam se při načtení vypíše do konzole a vynechá, ostatní animace fungují dál.
 
