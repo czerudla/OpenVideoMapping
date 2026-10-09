@@ -121,6 +121,35 @@ export default {
 - Výjimka nebo neplatný výsledek se vypíše do konzole a oblast se vykreslí s `uDataCount = 0`.
 - Hook je jen pro geometrii, ne pro simulaci závislou na čase.
 
+### Stavové animace (`sim`)
+
+Efekty, které se vyvíjejí krok za krokem (buněčné automaty, písek, had), potřebují stav. Animace proto může volitelně exportovat `sim`, krokovou simulaci v JS nad malou mřížkou. Renderer ji předá shaderu jako texturu:
+
+```js
+export default {
+  id: 'bar', name: 'Posuvný pruh', colors: 1,
+  sim: {
+    size(points, aspect) { return { w: 32, h: 18 }; }, // nejvýše 256 × 256, volá se při změně tvaru/poměru stran
+    stepsPerSecond: 8,   // kroky simulace za sekundu času t (včetně rychlosti oblasti)
+    stepsPerCycle: 64,   // po tolika krocích se simulace znovu inicializuje
+    // grid: Uint8Array w*h (vynulované), zapisuje se do něj; seed je deterministický
+    init(grid, w, h, seed, points, aspect) { grid[0] = 255; },
+    // čte src, zapisuje dst (obě Uint8Array w*h); stepIndex je pořadí kroku v rámci cyklu
+    step(src, dst, w, h, stepIndex) { dst.fill(0); dst[(stepIndex + 1) % w] = 255; },
+  },
+  glsl: `vec2 g = floor(vLocal * uStateSize);
+  float v = uStateSize.x > 0.0 ? texture(uState, (g + 0.5) / uStateSize).r : 0.0;
+  return uColA * v;`,
+};
+```
+
+- Shader dostane `uniform sampler2D uState` (R8, hodnota 0–255 na buňku, `NEAREST`, `CLAMP_TO_EDGE`), `uniform vec2 uStateSize` (`w`, `h`; 0, pokud animace nemá `sim` nebo simulace selhala) a `uniform float uStateFrac` (0–1, poloha mezi aktuálním a dalším krokem pro plynulé přechody).
+- Stav je deterministický a odvozený z času: krok `n = floor(t * stepsPerSecond)`, cyklus `floor(n / stepsPerCycle)`. Editor i výstupní okno simulují každé zvlášť, ale ukazují totéž, i po obnovení stránky. `init` a `step` proto musí být deterministické (žádné `Math.random()` ani `Date.now()`, používejte `seed` a `stepIndex`).
+- Mřížka je nejvýše 256 × 256 buněk. Pole `src`/`dst` i textura se alokují předem, `init` a `step` by neměly alokovat nic velkého.
+- Simulace všech oblastí smí za snímek zabrat nejvýše ~4 ms. Zbývající kroky se dopočítají v dalších snímcích, takže stav může po načtení stránky nebo skoku rychlosti krátce „dobíhat“. Při změně cyklu se rovnou volá `init`.
+- Výjimka v `size`, `init` nebo `step` se vypíše do konzole (jednou), simulace se pro oblast vypne (`uStateSize = 0`) a oblast se dál vykresluje.
+- `npm run check:animations` ověří, že `sim` má funkce `size`, `init`, `step` a kladná čísla `stepsPerSecond` a `stepsPerCycle`.
+
 ## Možná další rozšíření
 
 - video a obrázky jako výplň oblastí,
